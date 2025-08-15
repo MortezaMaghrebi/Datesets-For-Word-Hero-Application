@@ -354,8 +354,8 @@ Well#خوب#She speaks English well.#in a good way#A1#/wel/#او انگلیسی 
 Witch#جادوگر#The witch cast a spell.#a woman with magical powers#A2#/wɪtʃ/#جادوگر طلسمی را اجرا کرد.
 Worker#کارگر#The workers went on strike.#a person who works#A1#/ˈwɜːkər/#کارگران دست به اعتصاب زدند.
 World#جهان#She wants to travel the world.#the earth and all its inhabitants#A1#/wɜːld/#او می‌خواهد به جهان سفر کند.
-yacht#قایق بادبانی، یخت#They sailed their yacht around the Mediterranean#sailboat, pleasure craft#B2#jɒt#آنها با قایق بادبانی خود در مدیترانه گشت‌زدند  
-yankee#یانکی (عامیانه برای آمریکایی شمالی)#The term "Yankee" originally referred to New Englanders#American (Northern), Yank#C1#ˈjæŋ.ki#اصطلاح «یانکی» در اصل به مردم نیو انگلند اشاره داشت  
-yoga#یوگا#She practices yoga every morning for relaxation#mind-body exercise, meditation#A2#ˈjəʊ.ɡə#او هر صبح برای آرامش یوگا تمرین می‌کند  
-yolk#زرده تخم‌مرغ#Separate the yolk from the egg white before mixing#egg yellow part, vitellus#A1#jəʊk#زرده را از سفیده جدا کنید قبل از مخلوط کردن  
+Yacht#قایق بادبانی، یخت#They sailed their yacht around the Mediterranean#sailboat, pleasure craft#B2#jɒt#آنها با قایق بادبانی خود در مدیترانه گشت‌زدند  
+Yankee#یانکی (عامیانه برای آمریکایی شمالی)#The term "Yankee" originally referred to New Englanders#American (Northern), Yank#C1#ˈjæŋ.ki#اصطلاح «یانکی» در اصل به مردم نیو انگلند اشاره داشت  
+Yoga#یوگا#She practices yoga every morning for relaxation#mind-body exercise, meditation#A2#ˈjəʊ.ɡə#او هر صبح برای آرامش یوگا تمرین می‌کند  
+Yolk#زرده تخم‌مرغ#Separate the yolk from the egg white before mixing#egg yellow part, vitellus#A1#jəʊk#زرده را از سفیده جدا کنید قبل از مخلوط کردن  
 zap#ضربه سریع (انرژی یا حمله ناگهانی)#The superhero can zap villains with laser eyes#blast, strike suddenly#B1#zæp#سوپرهرئو می‌تواند با چشم‌های لیزری به شرورها حمله کند  
