@@ -117,8 +117,21 @@
                     <input type="checkbox" id="normalizeVerbs" checked class="ml-2"> تبدیل افعال به مصدر
                 </label>
                 <label class="flex items-center">
+                    <input type="checkbox" id="removePeople" class="ml-2"> حذف نام اشخاص
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" id="removePlaces" class="ml-2"> حذف مکان‌ها
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" id="removeOrganizations" class="ml-2"> حذف سازمان‌ها
+                </label>
+                <label class="flex items-center">
                     حداقل طول کلمه:
                     <input type="number" id="minWordLength" value="3" min="1" max="10" class="w-16 border rounded p-1 mr-2">
+                </label>
+                 <label class="flex items-center">
+                    حداقل تکرار:
+                    <input type="number" id="minFrequency" value="1" min="1" max="100" class="w-16 border rounded p-1 mr-2">
                 </label>
             </div>
         </div>
@@ -355,7 +368,6 @@
             outputDiv.classList.add('hidden');
             loadingDiv.style.display = 'block';
 
-            // استفاده از setTimeout برای اجازه به روزرسانی UI قبل از پردازش
             setTimeout(() => {
                 if (!inputText.trim()) {
                     loadingDiv.style.display = 'none';
@@ -364,10 +376,8 @@
                     return;
                 }
 
-                // ذخیره متن در localStorage
                 localStorage.setItem('extractorText', inputText);
 
-                // استفاده از Compromise برای پردازش متن
                 const doc = nlp(inputText);
                 
                 // اعمال تبدیل‌ها بر اساس تنظیمات کاربر
@@ -379,24 +389,40 @@
                     doc.verbs().toInfinitive();
                 }
 
-                // دریافت حداقل طول کلمه
-                const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
+                // دریافت کلمات کلیدی و فیلتر کردن آن‌ها
+                let terms = doc.terms();
+                
+                // فیلتر کردن اشخاص، مکان‌ها و سازمان‌ها
+                if (document.getElementById('removePeople').checked) {
+                    terms = terms.not(doc.people());
+                }
+                if (document.getElementById('removePlaces').checked) {
+                    terms = terms.not(doc.places());
+                }
+                if (document.getElementById('removeOrganizations').checked) {
+                    terms = terms.not(doc.organizations());
+                }
 
-                // استخراج کلمات و پاکسازی آن‌ها
-                const words = doc.terms()
-                    .out('array')
+                const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
+                const words = terms.out('array')
                     .map(word => word.toLowerCase().replace(/[^\w\s]|_/g, ''))
                     .filter(word => word.length >= minWordLength && !stopWords.has(word) && !/\d/.test(word))
-                    .filter(word => word); // حذف رشته‌های خالی
+                    .filter(word => word);
 
                 // شمارش فراوانی کلمات
                 const wordFreq = {};
                 words.forEach(word => {
                     wordFreq[word] = (wordFreq[word] || 0) + 1;
                 });
+                
+                // فیلتر کردن بر اساس حداقل تکرار
+                const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
+                const filteredWordFreq = Object.fromEntries(
+                    Object.entries(wordFreq).filter(([word, freq]) => freq >= minFrequency)
+                );
 
                 // مرتب‌سازی کلمات بر اساس فراوانی (نزولی)
-                const sortedWords = Object.entries(wordFreq)
+                const sortedWords = Object.entries(filteredWordFreq)
                     .sort((a, b) => b[1] - a[1]);
 
                 // نمایش کلمات در قالب ابر کلمات
@@ -450,8 +476,8 @@
                 { title: 'تعداد کلمات معنی‌دار', value: words.length, icon: 'fas fa-star' },
                 { title: 'تعداد کلمات منحصر به فرد', value: uniqueWords, icon: 'fas fa-key' },
                 { title: 'پرتکرارترین کلمه', value: mostFrequent, icon: 'fas fa-crown' },
-                { title: 'تنوع واژگان', value: `${((uniqueWords / words.length) * 100).toFixed(1)}%`, icon: 'fas fa-chart-pie' },
-                { title: 'میانگین فراوانی کلمات', value: (words.length / uniqueWords).toFixed(1), icon: 'fas fa-calculator' }
+                { title: 'تنوع واژگان', value: (words.length > 0) ? `${((uniqueWords / words.length) * 100).toFixed(1)}%` : '0%', icon: 'fas fa-chart-pie' },
+                { title: 'میانگین فراوانی کلمات', value: (uniqueWords > 0) ? (words.length / uniqueWords).toFixed(1) : '0', icon: 'fas fa-calculator' }
             ];
             
             stats.forEach(stat => {
