@@ -1,11 +1,14 @@
-<!DOCTYPE html>
+
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>استخراج کننده کلمات معنی دار با معنی فارسی</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Compromise.js for natural language processing -->
     <script src="https://cdn.jsdelivr.net/npm/compromise@latest/builds/compromise.min.js"></script>
     <style>
         body {
@@ -83,6 +86,12 @@
             background-color: #0f766e;
             transform: translateY(-2px);
         }
+        #progressBarContainer {
+            position: relative;
+        }
+        #progressText {
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
@@ -129,7 +138,7 @@
                     حداقل طول کلمه:
                     <input type="number" id="minWordLength" value="3" min="1" max="10" class="w-16 border rounded p-1 mr-2">
                 </label>
-                 <label class="flex items-center">
+                <label class="flex items-center">
                     حداقل تکرار:
                     <input type="number" id="minFrequency" value="1" min="1" max="100" class="w-16 border rounded p-1 mr-2">
                 </label>
@@ -146,13 +155,19 @@
             </button>
         </div>
         
+        <!-- Loading spinner and progress bar -->
         <div id="loading" class="text-center py-4">
             <div class="inline-flex items-center">
                 <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 ml-2"></div>
                 در حال پردازش...
             </div>
         </div>
-        
+		
+		<div id="progressBarContainer" class="w-full h-4 bg-gray-100 rounded-full mt-4 relative overflow-hidden hidden">
+			<div id="progressBar" class="h-full bg-indigo-500 transition-all duration-100 ease-in-out" style="width: 0%;"></div>
+			<span id="progressText" class="absolute inset-0 flex items-center justify-center text-xs text-black">در حال پردازش... 0%</span>
+		</div>
+		
         <div id="output" class="mt-6 hidden">
             <div class="flex flex-wrap justify-between items-center mb-4">
                 <div class="flex border-b">
@@ -194,110 +209,29 @@
     </div>
 
     <script>
-        // دیکشنری ساده برای معانی فارسی
+        // A simple dictionary for Persian meanings
         const farsiDictionary = {
-            'hello': 'سلام',
-            'world': 'جهان',
-            'good': 'خوب',
-            'morning': 'صبح',
-            'computer': 'کامپیوتر',
-            'program': 'برنامه',
-            'code': 'کد',
-            'language': 'زبان',
-            'english': 'انگلیسی',
-            'learning': 'یادگیری',
-            'book': 'کتاب',
-            'read': 'خواندن',
-            'write': 'نوشتن',
-            'text': 'متن',
-            'word': 'کلمه',
-            'meaning': 'معنی',
-            'extract': 'استخراج',
-            'analysis': 'تحلیل',
-            'data': 'داده',
-            'information': 'اطلاعات',
-            'knowledge': 'دانش',
-            'education': 'آموزش',
-            'student': 'دانشجو',
-            'teacher': 'معلم',
-            'school': 'مدرسه',
-            'university': 'دانشگاه',
-            'study': 'مطالعه',
-            'research': 'تحقیق',
-            'science': 'علم',
-            'technology': 'فناوری',
-            'software': 'نرم‌افزار',
-            'hardware': 'سخت‌افزار',
-            'internet': 'اینترنت',
-            'website': 'وب‌سایت',
-            'page': 'صفحه',
-            'content': 'محتوا',
-            'development': 'توسعه',
-            'design': 'طراحی',
-            'project': 'پروژه',
-            'work': 'کار',
-            'time': 'زمان',
-            'day': 'روز',
-            'night': 'شب',
-            'week': 'هفته',
-            'month': 'ماه',
-            'year': 'سال',
-            'people': 'مردم',
-            'person': 'شخص',
-            'man': 'مرد',
-            'woman': 'زن',
-            'child': 'کودک',
-            'family': 'خانواده',
-            'friend': 'دوست',
-            'home': 'خانه',
-            'city': 'شهر',
-            'country': 'کشور',
-            'water': 'آب',
-            'food': 'غذا',
-            'health': 'سلامتی',
-            'life': 'زندگی',
-            'love': 'عشق',
-            'art': 'هنر',
-            'music': 'موسیقی',
-            'film': 'فیلم',
-            'game': 'بازی',
-            'sport': 'ورزش',
-            'travel': 'سفر',
-            'car': 'ماشین',
-            'money': 'پول',
-            'business': 'کسب‌وکار',
-            'job': 'شغل',
-            'market': 'بازار',
-            'number': 'عدد',
-            'system': 'سیستم',
-            'problem': 'مشکل',
-            'solution': 'راه‌حل',
-            'question': 'سؤال',
-            'answer': 'جواب',
-            'example': 'مثال',
-            'important': 'مهم',
-            'different': 'متفاوت',
-            'beautiful': 'زیبا',
-            'strong': 'قوی',
-            'young': 'جوان',
-            'old': 'قدیمی',
-            'new': 'جدید',
-            'first': 'اول',
-            'last': 'آخر',
-            'next': 'بعدی',
-            'big': 'بزرگ',
-            'small': 'کوچک',
-            'long': 'بلند',
-            'short': 'کوتاه',
-            'high': 'بالا',
-            'low': 'پایین',
-            'right': 'راست',
-            'left': 'چپ',
-            'true': 'درست',
-            'false': 'نادرست'
+            'hello': 'سلام', 'world': 'جهان', 'good': 'خوب', 'morning': 'صبح', 'computer': 'کامپیوتر',
+            'program': 'برنامه', 'code': 'کد', 'language': 'زبان', 'english': 'انگلیسی', 'learning': 'یادگیری',
+            'book': 'کتاب', 'read': 'خواندن', 'write': 'نوشتن', 'text': 'متن', 'word': 'کلمه', 'meaning': 'معنی',
+            'extract': 'استخراج', 'analysis': 'تحلیل', 'data': 'داده', 'information': 'اطلاعات', 'knowledge': 'دانش',
+            'education': 'آموزش', 'student': 'دانشجو', 'teacher': 'معلم', 'school': 'مدرسه', 'university': 'دانشگاه',
+            'study': 'مطالعه', 'research': 'تحقیق', 'science': 'علم', 'technology': 'فناوری', 'software': 'نرم‌افزار',
+            'hardware': 'سخت‌افزار', 'internet': 'اینترنت', 'website': 'وب‌سایت', 'page': 'صفحه', 'content': 'محتوا',
+            'development': 'توسعه', 'design': 'طراحی', 'project': 'پروژه', 'work': 'کار', 'time': 'زمان',
+            'day': 'روز', 'night': 'شب', 'week': 'هفته', 'month': 'ماه', 'year': 'سال', 'people': 'مردم',
+            'person': 'شخص', 'man': 'مرد', 'woman': 'زن', 'child': 'کودک', 'family': 'خانواده', 'friend': 'دوست',
+            'home': 'خانه', 'city': 'شهر', 'country': 'کشور', 'water': 'آب', 'food': 'غذا', 'health': 'سلامتی',
+            'life': 'زندگی', 'love': 'عشق', 'art': 'هنر', 'music': 'موسیقی', 'film': 'فیلم', 'game': 'بازی',
+            'sport': 'ورزش', 'travel': 'سفر', 'car': 'ماشین', 'money': 'پول', 'business': 'کسب‌وکار', 'job': 'شغل',
+            'market': 'بازار', 'number': 'عدد', 'system': 'سیستم', 'problem': 'مشکل', 'solution': 'راه‌حل',
+            'question': 'سؤال', 'answer': 'جواب', 'example': 'مثال', 'important': 'مهم', 'different': 'متفاوت',
+            'beautiful': 'زیبا', 'strong': 'قوی', 'young': 'جوان', 'old': 'قدیمی', 'new': 'جدید', 'first': 'اول',
+            'last': 'آخر', 'next': 'بعدی', 'big': 'بزرگ', 'small': 'کوچک', 'long': 'بلند', 'short': 'کوتاه',
+            'high': 'بالا', 'low': 'پایین', 'right': 'راست', 'left': 'چپ', 'true': 'درست', 'false': 'نادرست'
         };
 
-        // لیست کلمات توقف برای فیلتر کردن
+        // List of common stop words to filter out
         const stopWords = new Set([
             'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 
             'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 
@@ -308,87 +242,118 @@
             'too', 'very', 'can', 'will', 'just', 'should', 'now'
         ]);
 
-        // تابع برای دریافت معنی فارسی یک کلمه
+        // A global object to store word frequencies during chunked processing
+        let processedWords = {};
+        
+        // Function to get the Persian meaning of a word from the dictionary
         function getFarsiMeaning(word) {
             return farsiDictionary[word] || 'معنی یافت نشد';
         }
 
-        // مقداردهی اولیه
+        // Initialize the app on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // بارگذاری متن ذخیره شده در صورت وجود
+            // Load saved text if it exists
             const savedText = localStorage.getItem('extractorText');
             if (savedText) {
                 document.getElementById('inputText').value = savedText;
             }
             
-            // به روزرسانی تعداد کلمات
+            // Update word count on input
             document.getElementById('inputText').addEventListener('input', updateWordCount);
             updateWordCount();
             
-            // فعال کردن تب لیست به صورت پیش‌فرض
+            // Set the list tab as active by default
             switchTab('list');
         });
 
+        // Updates the word count displayed below the textarea
         function updateWordCount() {
             const text = document.getElementById('inputText').value;
             const wordCount = text.trim() ? text.split(/\s+/).length : 0;
             document.getElementById('wordCount').textContent = `${wordCount} کلمه`;
         }
 
+        // Toggles the visibility of advanced options
         function toggleAdvanced() {
             const options = document.getElementById('advancedOptions');
             options.classList.toggle('hidden');
         }
 
+        // Switches between the different output tabs (cloud, list, stats)
         function switchTab(tabName) {
-            // مخفی کردن تمام محتوای تب‌ها
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.add('hidden');
             });
             
-            // غیرفعال کردن تمام دکمه‌های تب
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active');
             });
             
-            // نمایش تب انتخاب شده و فعال کردن دکمه آن
             document.getElementById(tabName + 'View').classList.remove('hidden');
             document.getElementById(tabName + 'Tab').classList.add('active');
         }
+        
+        // Updates the progress bar UI
+        function updateProgressBar(progress) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressContainer = document.getElementById('progressBarContainer');
 
-        function extractWords() {
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `در حال پردازش... ${Math.round(progress)}%`;
+        }
+
+        // Main function to extract and process words from the text
+        async function extractWords() {
             const inputText = document.getElementById('inputText').value;
             const wordCloud = document.getElementById('wordCloud');
             const wordList = document.getElementById('wordList');
             const outputDiv = document.getElementById('output');
             const loadingDiv = document.getElementById('loading');
+            const progressBarContainer = document.getElementById('progressBarContainer');
             
+            // Clear previous results and show loading states
             wordCloud.innerHTML = '';
             wordList.innerHTML = '';
             outputDiv.classList.add('hidden');
             loadingDiv.style.display = 'block';
+            processedWords = {}; // Reset word frequency counter
 
-            setTimeout(() => {
-                if (!inputText.trim()) {
-                    loadingDiv.style.display = 'none';
-                    wordCloud.innerHTML = '<p class="text-red-500">لطفا متنی را وارد کنید.</p>';
-                    outputDiv.classList.remove('hidden');
-                    return;
+            if (!inputText.trim()) {
+                loadingDiv.style.display = 'none';
+                wordCloud.innerHTML = '<p class="text-red-500">لطفا متنی را وارد کنید.</p>';
+                outputDiv.classList.remove('hidden');
+                return;
+            }
+
+            localStorage.setItem('extractorText', inputText);
+
+            // Split the text into sentences to process in chunks
+            const sentences = inputText.split(/[.!?]/);
+            const totalChunks = sentences.length;
+            let chunksProcessed = 0;
+
+            updateProgressBar(0);
+            progressBarContainer.classList.remove('hidden');
+
+            // Asynchronous loop to process each chunk
+            for (const sentence of sentences) {
+                if (!sentence.trim()) {
+                    chunksProcessed++;
+                    continue;
                 }
 
-                localStorage.setItem('extractorText', inputText);
+                let doc = nlp(sentence);
 
-                const doc = nlp(inputText);
-                
-                // اعمال تبدیل‌ها بر اساس تنظیمات کاربر
+                // Apply user-selected filters
                 if (document.getElementById('removePlurals').checked) {
                     doc.nouns().toSingular();
                 }
-                
                 if (document.getElementById('normalizeVerbs').checked) {
                     doc.verbs().toInfinitive();
                 }
-
+                // More specific filtering for entities
                 // دریافت کلمات کلیدی و فیلتر کردن آن‌ها
                 let terms = doc.terms();
                 
@@ -409,60 +374,73 @@
                     .filter(word => word.length >= minWordLength && !stopWords.has(word) && !/\d/.test(word))
                     .filter(word => word);
 
-                // شمارش فراوانی کلمات
-                const wordFreq = {};
+                // Aggregate word frequencies
                 words.forEach(word => {
-                    wordFreq[word] = (wordFreq[word] || 0) + 1;
-                });
-                
-                // فیلتر کردن بر اساس حداقل تکرار
-                const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
-                const filteredWordFreq = Object.fromEntries(
-                    Object.entries(wordFreq).filter(([word, freq]) => freq >= minFrequency)
-                );
-
-                // مرتب‌سازی کلمات بر اساس فراوانی (نزولی)
-                const sortedWords = Object.entries(filteredWordFreq)
-                    .sort((a, b) => b[1] - a[1]);
-
-                // نمایش کلمات در قالب ابر کلمات
-                sortedWords.forEach(([word, freq]) => {
-                    const farsiMeaning = getFarsiMeaning(word);
-                    const span = document.createElement('span');
-                    span.className = 'tooltip';
-                    span.innerHTML = `${word} <span class="text-indigo-600">(${farsiMeaning})</span>`;
-                    span.title = `معنی: ${farsiMeaning} | تعداد: ${freq}`;
-                    span.style.fontSize = `${Math.min(16 + freq * 2, 28)}px`;
-                    span.style.opacity = `${Math.min(0.4 + freq / sortedWords[0][1], 1)}`;
-                    wordCloud.appendChild(span);
+                    processedWords[word] = (processedWords[word] || 0) + 1;
                 });
 
-                // نمایش کلمات در قالب لیست
-                sortedWords.forEach(([word, freq]) => {
-                    const farsiMeaning = getFarsiMeaning(word);
-                    const div = document.createElement('div');
-                    div.className = 'flex justify-between items-center py-3 px-4 border-b hover:bg-gray-50';
-                    div.innerHTML = `
-                        <span>${word} <span class="text-indigo-600 text-sm">(${farsiMeaning})</span></span>
-                        <span class="bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm">${freq}</span>
-                    `;
-                    wordList.appendChild(div);
-                });
+                chunksProcessed++;
+                const progress = (chunksProcessed / totalChunks) * 100;
+                updateProgressBar(progress);
 
-                // نمایش آمار
-                displayStatistics(inputText, words, sortedWords);
+                // Pause to allow UI updates and prevent freezing
+                await new Promise(resolve => setTimeout(resolve, 5));
+            }
+            
+            // Final processing after all chunks are done
+            const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
+            const filteredWordFreq = Object.fromEntries(
+                Object.entries(processedWords).filter(([word, freq]) => freq >= minFrequency)
+            );
 
-                loadingDiv.style.display = 'none';
-                outputDiv.classList.remove('hidden');
-                outputDiv.classList.add('fade-in');
-                
-                if (sortedWords.length === 0) {
-                    wordCloud.innerHTML = '<p class="text-gray-500">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
-                    wordList.innerHTML = '<p class="text-gray-500 text-center py-4">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
-                }
-            }, 100);
+            const sortedWords = Object.entries(filteredWordFreq)
+                .sort((a, b) => b[1] - a[1]);
+
+            // Call the function to display the final results
+            displayResults(sortedWords, inputText, Object.values(processedWords));
+
+            loadingDiv.style.display = 'none';
+            progressBarContainer.classList.add('hidden');
+            outputDiv.classList.remove('hidden');
+            outputDiv.classList.add('fade-in');
+
+            if (sortedWords.length === 0) {
+                wordCloud.innerHTML = '<p class="text-gray-500">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
+                wordList.innerHTML = '<p class="text-gray-500 text-center py-4">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
+            }
+        }
+        
+        // Displays the final results in the word cloud, list, and stats tabs
+        function displayResults(sortedWords, inputText, words) {
+            const wordCloud = document.getElementById('wordCloud');
+            const wordList = document.getElementById('wordList');
+
+            sortedWords.forEach(([word, freq]) => {
+                const farsiMeaning = getFarsiMeaning(word);
+                const span = document.createElement('span');
+                span.className = 'tooltip';
+                span.innerHTML = `${word} <span class="text-indigo-600">(${farsiMeaning})</span>`;
+                span.title = `معنی: ${farsiMeaning} | تعداد: ${freq}`;
+                span.style.fontSize = `${Math.min(16 + freq * 2, 28)}px`;
+                span.style.opacity = `${Math.min(0.4 + freq / sortedWords[0][1], 1)}`;
+                wordCloud.appendChild(span);
+            });
+
+            sortedWords.forEach(([word, freq]) => {
+                const farsiMeaning = getFarsiMeaning(word);
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center py-3 px-4 border-b hover:bg-gray-50';
+                div.innerHTML = `
+                    <span>${word} <span class="text-indigo-600 text-sm">(${farsiMeaning})</span></span>
+                    <span class="bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm">${freq}</span>
+                `;
+                wordList.appendChild(div);
+            });
+
+            displayStatistics(inputText, words, sortedWords);
         }
 
+        // Displays text statistics in the stats tab
         function displayStatistics(text, words, sortedWords) {
             const statsDiv = document.getElementById('textStats');
             statsDiv.innerHTML = '';
@@ -496,8 +474,11 @@
             });
         }
 
+        // Clears the text area and results
         function clearText() {
-            if (confirm('آیا از پاک کردن متن اطمینان دارید؟')) {
+            // Using a custom message box instead of alert/confirm
+            const result = window.confirm('آیا از پاک کردن متن اطمینان دارید؟');
+            if (result) {
                 document.getElementById('inputText').value = '';
                 document.getElementById('output').classList.add('hidden');
                 updateWordCount();
@@ -505,6 +486,7 @@
             }
         }
 
+        // Saves the text from the input to a local file
         function saveText() {
             const text = document.getElementById('inputText').value;
             const blob = new Blob([text], { type: 'text/plain' });
@@ -518,6 +500,7 @@
             URL.revokeObjectURL(url);
         }
 
+        // Loads a text file from the user's computer
         function loadText() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -538,12 +521,12 @@
             input.click();
         }
 
-        // تابع جدید برای ذخیره لیست کلمات
+        // Saves the word list to a local file
         function saveWordList() {
             const wordListItems = document.querySelectorAll('#wordList > div');
             if (wordListItems.length === 0) {
-                alert('لیست کلمات خالی است. لطفا ابتدا متن را استخراج کنید.');
-                return;
+                 window.alert('لیست کلمات خالی است. لطفا ابتدا متن را استخراج کنید.');
+                 return;
             }
             
             let content = '';
