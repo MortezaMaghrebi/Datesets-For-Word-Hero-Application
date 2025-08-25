@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استخراج کننده کلمات معنی دار با معنی فارسی</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/compromise@latest/builds/compromise.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .word-cloud span {
+            display: inline-block;
+            margin: 8px;
+            padding: 10px 15px;
+            background: #fff;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .word-cloud span:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            border-bottom: 3px solid #4f46e5;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+        #loading {
+            display: none;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 180px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -90px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <div class="max-w-5xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
+        <h1 class="text-3xl font-bold mb-2 text-indigo-600 text-center">
+            <i class="fas fa-language mr-2"></i>استخراج کننده کلمات معنی دار با معنی فارسی
+        </h1>
+        <p class="text-gray-600 mb-6 text-center">متن انگلیسی خود را وارد کنید تا کلمات کلیدی به همراه معنی فارسی استخراج شوند</p>
+        
+        <div class="flex flex-wrap justify-center gap-2 mb-4">
+            <button onclick="clearText()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex items-center">
+                <i class="fas fa-trash-alt ml-1"></i> پاک کردن
+            </button>
+            <button onclick="saveText()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 flex items-center">
+                <i class="fas fa-save ml-1"></i> ذخیره متن
+            </button>
+            <button onclick="loadText()" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 flex items-center">
+                <i class="fas fa-folder-open ml-1"></i> بارگذاری متن
+            </button>
+            <button onclick="toggleAdvanced()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 flex items-center">
+                <i class="fas fa-cog ml-1"></i> تنظیمات
+            </button>
+        </div>
+        
+        <div id="advancedOptions" class="bg-gray-50 p-4 rounded-md mb-4 hidden">
+            <h3 class="font-semibold mb-2">تنظیمات پیشرفته</h3>
+            <div class="flex flex-wrap items-center gap-4">
+                <label class="flex items-center">
+                    <input type="checkbox" id="removePlurals" checked class="ml-2"> تبدیل جمع به مفرد
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" id="normalizeVerbs" checked class="ml-2"> تبدیل افعال به مصدر
+                </label>
+                <label class="flex items-center">
+                    حداقل طول کلمه:
+                    <input type="number" id="minWordLength" value="3" min="1" max="10" class="w-16 border rounded p-1 mr-2">
+                </label>
+            </div>
+        </div>
+        
+        <textarea id="inputText" class="w-full p-4 border rounded-md mb-4 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300" rows="6" placeholder="متن انگلیسی خود را اینجا وارد کنید..."></textarea>
+        
+        <div class="flex justify-between items-center mb-4">
+            <div class="text-sm text-gray-500" id="wordCount">0 کلمه</div>
+            <button onclick="extractWords()" class="bg-indigo-500 text-white px-6 py-2 rounded-md hover:bg-indigo-600 flex items-center">
+                استخراج کلمات
+                <i class="fas fa-search mr-2"></i>
+            </button>
+        </div>
+        
+        <div id="loading" class="text-center py-4">
+            <div class="inline-flex items-center">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 ml-2"></div>
+                در حال پردازش...
+            </div>
+        </div>
+        
+        <div id="output" class="mt-6 hidden">
+            <div class="flex border-b mb-4">
+                <button id="cloudTab" class="tab-button px-4 py-2 active" onclick="switchTab('cloud')">
+                    <i class="fas fa-cloud ml-1"></i> نمایش ابری
+                </button>
+                <button id="listTab" class="tab-button px-4 py-2" onclick="switchTab('list')">
+                    <i class="fas fa-list ml-1"></i> نمایش لیستی
+                </button>
+                <button id="statsTab" class="tab-button px-4 py-2" onclick="switchTab('stats')">
+                    <i class="fas fa-chart-bar ml-1"></i> آمار
+                </button>
+            </div>
+            
+            <div id="cloudView" class="tab-content">
+                <h2 class="text-lg font-semibold mb-2">ابر کلمات</h2>
+                <div id="wordCloud" class="word-cloud mt-2 p-4 bg-gray-50 rounded-md text-center"></div>
+            </div>
+            
+            <div id="listView" class="tab-content hidden">
+                <h2 class="text-lg font-semibold mb-2">لیست کلمات به ترتیب فراوانی</h2>
+                <div class="flex justify-between mb-2 px-4 font-semibold">
+                    <span>کلمه (معنی فارسی)</span>
+                    <span>تعداد</span>
+                </div>
+                <div id="wordList" class="max-h-80 overflow-y-auto"></div>
+            </div>
+            
+            <div id="statsView" class="tab-content hidden">
+                <h2 class="text-lg font-semibold mb-2">آمار متن</h2>
+                <div id="textStats" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // دیکشنری ساده برای معانی فارسی
+        const farsiDictionary = {
+            'hello': 'سلام',
+            'world': 'جهان',
+            'good': 'خوب',
+            'morning': 'صبح',
+            'computer': 'کامپیوتر',
+            'program': 'برنامه',
+            'code': 'کد',
+            'language': 'زبان',
+            'english': 'انگلیسی',
+            'learning': 'یادگیری',
+            'book': 'کتاب',
+            'read': 'خواندن',
+            'write': 'نوشتن',
+            'text': 'متن',
+            'word': 'کلمه',
+            'meaning': 'معنی',
+            'extract': 'استخراج',
+            'analysis': 'تحلیل',
+            'data': 'داده',
+            'information': 'اطلاعات',
+            'knowledge': 'دانش',
+            'education': 'آموزش',
+            'student': 'دانشجو',
+            'teacher': 'معلم',
+            'school': 'مدرسه',
+            'university': 'دانشگاه',
+            'study': 'مطالعه',
+            'research': 'تحقیق',
+            'science': 'علم',
+            'technology': 'فناوری',
+            'software': 'نرم‌افزار',
+            'hardware': 'سخت‌افزار',
+            'internet': 'اینترنت',
+            'website': 'وب‌سایت',
+            'page': 'صفحه',
+            'content': 'محتوا',
+            'development': 'توسعه',
+            'design': 'طراحی',
+            'project': 'پروژه',
+            'work': 'کار',
+            'time': 'زمان',
+            'day': 'روز',
+            'night': 'شب',
+            'week': 'هفته',
+            'month': 'ماه',
+            'year': 'سال',
+            'people': 'مردم',
+            'person': 'شخص',
+            'man': 'مرد',
+            'woman': 'زن',
+            'child': 'کودک',
+            'family': 'خانواده',
+            'friend': 'دوست',
+            'home': 'خانه',
+            'city': 'شهر',
+            'country': 'کشور',
+            'water': 'آب',
+            'food': 'غذا',
+            'health': 'سلامتی',
+            'life': 'زندگی',
+            'love': 'عشق',
+            'art': 'هنر',
+            'music': 'موسیقی',
+            'film': 'فیلم',
+            'game': 'بازی',
+            'sport': 'ورزش',
+            'travel': 'سفر',
+            'car': 'ماشین',
+            'money': 'پول',
+            'business': 'کسب‌وکار',
+            'job': 'شغل',
+            'market': 'بازار',
+            'number': 'عدد',
+            'system': 'سیستم',
+            'problem': 'مشکل',
+            'solution': 'راه‌حل',
+            'question': 'سؤال',
+            'answer': 'جواب',
+            'example': 'مثال',
+            'important': 'مهم',
+            'different': 'متفاوت',
+            'beautiful': 'زیبا',
+            'strong': 'قوی',
+            'young': 'جوان',
+            'old': 'قدیمی',
+            'new': 'جدید',
+            'first': 'اول',
+            'last': 'آخر',
+            'next': 'بعدی',
+            'big': 'بزرگ',
+            'small': 'کوچک',
+            'long': 'بلند',
+            'short': 'کوتاه',
+            'high': 'بالا',
+            'low': 'پایین',
+            'right': 'راست',
+            'left': 'چپ',
+            'true': 'درست',
+            'false': 'نادرست'
+        };
+
+        // لیست کلمات توقف برای فیلتر کردن
+        const stopWords = new Set([
+            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 
+            'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 
+            'to', 'was', 'were', 'with', 'you', 'this', 'but', 'or', 'not',
+            'which', 'what', 'when', 'where', 'who', 'whom', 'how', 'why',
+            'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other',
+            'some', 'such', 'no', 'nor', 'only', 'own', 'same', 'so', 'than',
+            'too', 'very', 'can', 'will', 'just', 'should', 'now'
+        ]);
+
+        // تابع برای دریافت معنی فارسی یک کلمه
+        function getFarsiMeaning(word) {
+            return farsiDictionary[word] || 'معنی یافت نشد';
+        }
+
+        // مقداردهی اولیه
+        document.addEventListener('DOMContentLoaded', function() {
+            // بارگذاری متن ذخیره شده در صورت وجود
+            const savedText = localStorage.getItem('extractorText');
+            if (savedText) {
+                document.getElementById('inputText').value = savedText;
+            }
+            
+            // به روزرسانی تعداد کلمات
+            document.getElementById('inputText').addEventListener('input', updateWordCount);
+            updateWordCount();
+        });
+
+        function updateWordCount() {
+            const text = document.getElementById('inputText').value;
+            const wordCount = text.trim() ? text.split(/\s+/).length : 0;
+            document.getElementById('wordCount').textContent = `${wordCount} کلمه`;
+        }
+
+        function toggleAdvanced() {
+            const options = document.getElementById('advancedOptions');
+            options.classList.toggle('hidden');
+        }
+
+        function switchTab(tabName) {
+            // مخفی کردن تمام محتوای تب‌ها
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // غیرفعال کردن تمام دکمه‌های تب
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // نمایش تب انتخاب شده و فعال کردن دکمه آن
+            document.getElementById(tabName + 'View').classList.remove('hidden');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        function extractWords() {
+            const inputText = document.getElementById('inputText').value;
+            const wordCloud = document.getElementById('wordCloud');
+            const wordList = document.getElementById('wordList');
+            const outputDiv = document.getElementById('output');
+            const loadingDiv = document.getElementById('loading');
+            
+            wordCloud.innerHTML = '';
+            wordList.innerHTML = '';
+            outputDiv.classList.add('hidden');
+            loadingDiv.style.display = 'block';
+
+            // استفاده از setTimeout برای اجازه به روزرسانی UI قبل از پردازش
+            setTimeout(() => {
+                if (!inputText.trim()) {
+                    loadingDiv.style.display = 'none';
+                    wordCloud.innerHTML = '<p class="text-red-500">لطفا متنی را وارد کنید.</p>';
+                    outputDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // ذخیره متن در localStorage
+                localStorage.setItem('extractorText', inputText);
+
+                // استفاده از Compromise برای پردازش متن
+                const doc = nlp(inputText);
+                
+                // اعمال تبدیل‌ها بر اساس تنظیمات کاربر
+                if (document.getElementById('removePlurals').checked) {
+                    doc.nouns().toSingular();
+                }
+                
+                if (document.getElementById('normalizeVerbs').checked) {
+                    doc.verbs().toInfinitive();
+                }
+
+                // دریافت حداقل طول کلمه
+                const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
+
+                // استخراج کلمات و پاکسازی آن‌ها
+                const words = doc.terms()
+                    .out('array')
+                    .map(word => word.toLowerCase().replace(/[^\w\s]|_/g, ''))
+                    .filter(word => word.length >= minWordLength && !stopWords.has(word) && !/\d/.test(word))
+                    .filter(word => word); // حذف رشته‌های خالی
+
+                // شمارش فراوانی کلمات
+                const wordFreq = {};
+                words.forEach(word => {
+                    wordFreq[word] = (wordFreq[word] || 0) + 1;
+                });
+
+                // مرتب‌سازی کلمات بر اساس فراوانی (نزولی)
+                const sortedWords = Object.entries(wordFreq)
+                    .sort((a, b) => b[1] - a[1]);
+
+                // نمایش کلمات در قالب ابر کلمات
+                sortedWords.forEach(([word, freq]) => {
+                    const farsiMeaning = getFarsiMeaning(word);
+                    const span = document.createElement('span');
+                    span.className = 'tooltip';
+                    span.innerHTML = `${word} <span class="text-indigo-600">(${farsiMeaning})</span>`;
+                    span.title = `معنی: ${farsiMeaning} | تعداد: ${freq}`;
+                    span.style.fontSize = `${Math.min(16 + freq * 2, 28)}px`;
+                    span.style.opacity = `${Math.min(0.4 + freq / sortedWords[0][1], 1)}`;
+                    wordCloud.appendChild(span);
+                });
+
+                // نمایش کلمات در قالب لیست
+                sortedWords.forEach(([word, freq]) => {
+                    const farsiMeaning = getFarsiMeaning(word);
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center py-3 px-4 border-b hover:bg-gray-50';
+                    div.innerHTML = `
+                        <span>${word} <span class="text-indigo-600 text-sm">(${farsiMeaning})</span></span>
+                        <span class="bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm">${freq}</span>
+                    `;
+                    wordList.appendChild(div);
+                });
+
+                // نمایش آمار
+                displayStatistics(inputText, words, sortedWords);
+
+                loadingDiv.style.display = 'none';
+                outputDiv.classList.remove('hidden');
+                outputDiv.classList.add('fade-in');
+                
+                if (sortedWords.length === 0) {
+                    wordCloud.innerHTML = '<p class="text-gray-500">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
+                }
+            }, 100);
+        }
+
+        function displayStatistics(text, words, sortedWords) {
+            const statsDiv = document.getElementById('textStats');
+            statsDiv.innerHTML = '';
+            
+            const totalWords = text.split(/\s+/).length;
+            const uniqueWords = sortedWords.length;
+            const mostFrequent = sortedWords.length ? `${sortedWords[0][0]} (${sortedWords[0][1]} بار)` : 'یافت نشد';
+            
+            const stats = [
+                { title: 'تعداد کل کلمات', value: totalWords, icon: 'fas fa-font' },
+                { title: 'تعداد کلمات معنی‌دار', value: words.length, icon: 'fas fa-star' },
+                { title: 'تعداد کلمات منحصر به فرد', value: uniqueWords, icon: 'fas fa-key' },
+                { title: 'پرتکرارترین کلمه', value: mostFrequent, icon: 'fas fa-crown' },
+                { title: 'تنوع واژگان', value: `${((uniqueWords / words.length) * 100).toFixed(1)}%`, icon: 'fas fa-chart-pie' },
+                { title: 'میانگین فراوانی کلمات', value: (words.length / uniqueWords).toFixed(1), icon: 'fas fa-calculator' }
+            ];
+            
+            stats.forEach(stat => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 p-4 rounded-lg';
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="${stat.icon} text-indigo-500 text-xl ml-3"></i>
+                        <div>
+                            <div class="text-sm text-gray-500">${stat.title}</div>
+                            <div class="text-xl font-bold">${stat.value}</div>
+                        </div>
+                    </div>
+                `;
+                statsDiv.appendChild(div);
+            });
+        }
+
+        function clearText() {
+            if (confirm('آیا از پاک کردن متن اطمینان دارید؟')) {
+                document.getElementById('inputText').value = '';
+                document.getElementById('output').classList.add('hidden');
+                updateWordCount();
+                localStorage.removeItem('extractorText');
+            }
+        }
+
+        function saveText() {
+            const text = document.getElementById('inputText').value;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'extracted-text.txt';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        function loadText() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt,.text';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('inputText').value = e.target.result;
+                    updateWordCount();
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+    </script>
+</body>
+</html>
