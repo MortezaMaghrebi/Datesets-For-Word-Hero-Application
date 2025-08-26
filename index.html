@@ -122,13 +122,13 @@
                     <input type="checkbox" id="normalizeVerbs" checked class="ml-2"> تبدیل افعال به مصدر
                 </label>
                 <label class="flex items-center">
-                    <input type="checkbox" id="removePeople" class="ml-2"> حذف نام اشخاص
+                    <input type="checkbox" id="removePeople" checked class="ml-2"> حذف نام اشخاص
                 </label>
                 <label class="flex items-center">
-                    <input type="checkbox" id="removePlaces" class="ml-2"> حذف مکان‌ها
+                    <input type="checkbox" id="removePlaces" checked class="ml-2"> حذف مکان‌ها
                 </label>
                 <label class="flex items-center">
-                    <input type="checkbox" id="removeOrganizations" class="ml-2"> حذف سازمان‌ها
+                    <input type="checkbox" id="removeOrganizations" checked class="ml-2"> حذف سازمان‌ها
                 </label>
                 <label class="flex items-center">
                     حداقل طول کلمه:
@@ -326,6 +326,27 @@
 			.join(' ');
 		}
 		
+		function splitTextIntoChunks(text, chunkSize) {
+			const chunks = [];
+			let start = 0;
+			while (start < text.length) {
+				let end = start + chunkSize;
+				if (end >= text.length) {
+					end = text.length;
+				} else {
+					// عقب برو تا به آخرین اسپیس قبل از chunkSize برسیم
+					let lastSpace = text.lastIndexOf(' ', end);
+					if (lastSpace > start) {
+						end = lastSpace;
+					}
+				}
+		
+				chunks.push(text.slice(start, end).trim());
+				start = end + 1; // بعد از اسپیس ادامه می‌دهیم
+			}
+			return chunks;
+		}
+		
         // Main function to extract and process words from the text
         async function extractWords() {
             const inputText = document.getElementById('inputText').value;
@@ -352,21 +373,26 @@
             localStorage.setItem('extractorText', inputText);
 
             // Split the text into sentences to process in chunks
-            const sentences = inputText.split(/[.!?]/);
-            const totalChunks = sentences.length;
+			//const chunkSize = Math.ceil(inputText.length / 20); // تقسیم متن به 10 بخش تقریبا مساوی
+			//const chunks = splitTextIntoChunks(inputText, chunkSize);
+			//const totalChunks = chunks.length;
+			//let chunksProcessed = 0;    
+			
+			const chunks = inputText.split(/[.!؟\n]/);
+            const totalChunks = chunks.length;
             let chunksProcessed = 0;
 
             updateProgressBar(0);
             progressBarContainer.classList.remove('hidden');
 
             // Asynchronous loop to process each chunk
-            for (const sentence of sentences) {
-                if (!sentence.trim()) {
+            for (const chunk of chunks) {
+                if (!chunk.trim()) {
                     chunksProcessed++;
                     continue;
                 }
 
-                let cleaned = preprocess(sentence, 3);
+                let cleaned = preprocess(chunk, 3);
 				let doc = nlp(cleaned);
 				
 				// --- ادامه پردازش NLP ---
