@@ -386,7 +386,7 @@
 				if (document.getElementById('removeOrganizations').checked) removeEntities.push(...doc.organizations().out('array'));
 				
 				const finalWords = terms.filter(word =>
-				!stopWords.has(word) &&
+				
 				!removeEntities.includes(word)
 				);
 				
@@ -407,7 +407,7 @@
             const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
 			const filteredWordFreq = Object.fromEntries(
 				Object.entries(processedWords).filter(([word, freq]) =>
-					freq >= minFrequency && externalDictionary.has(word.toLowerCase()) // ✅ اینجا چک دیکشنری
+					(freq >= minFrequency) && externalDictionary.has(word.toLowerCase()) && (!stopWords.has(word)) // ✅ اینجا چک دیکشنری
 				)
 			);
 
@@ -550,7 +550,6 @@
                 const wordText = item.querySelector('span').textContent;
                 const parts = wordText.split(' (');
                 const word = parts[0];
-                const meaning = parts[1].replace(')', '');
                 const count = item.querySelector('.bg-indigo-100').textContent;
                 
                 content += `${word} #${count}\n`;
