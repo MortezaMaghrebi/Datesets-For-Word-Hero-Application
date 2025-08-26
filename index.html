@@ -205,25 +205,14 @@
 
     <script>
 
-
-        // List of common stop words to filter out
-        const stopWords = new Set([
-            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 
-            'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 
-            'to', 'was', 'were', 'with', 'you', 'this', 'but', 'or', 'not',
-            'which', 'what', 'when', 'where', 'who', 'whom', 'how', 'why',
-            'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other',
-            'some', 'such', 'no', 'nor', 'only', 'own', 'same', 'so', 'than',
-            'too', 'very', 'can', 'will', 'just', 'should', 'now'
-        ]);
-
-        // A global object to store word frequencies during chunked processing
+		// A global object to store word frequencies during chunked processing
         let processedWords = {};
         
         // --- NEW FEATURE: Load and store external dictionary ---
         let externalDictionary = new Set();
         // Change 'your-large-dictionary-file.txt' to the actual path of your file
         const DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
+		const STOPWORDS_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_stop.txt";
 
         
         async function fetchDictionary() {
@@ -244,7 +233,23 @@
 		}
         // --- END OF NEW FEATURE CODE ---
 
-
+		let stopWords = new Set();
+		
+		async function fetchStopWords() {
+			try {
+				const response = await fetch(STOPWORDS_FILE_PATH);
+				if (!response.ok) throw new Error("HTTP error " + response.status);
+		
+				const text = await response.text();
+				const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+		
+				stopWords = new Set(words);
+		
+				console.log("✅ Stop words loaded:", stopWords.size);
+			} catch (err) {
+				console.error("❌ Failed to load stop words:", err);
+			}
+		}
 
         // Initialize the app on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -263,6 +268,7 @@
 
             // --- NEW: Call the function to load the dictionary on page load ---
             fetchDictionary();
+			fetchStopWords();
             // --- END NEW CODE ---
         });
 
