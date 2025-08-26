@@ -311,21 +311,23 @@
         }
 
 		function preprocess(sentence, minWordLength = 3) {
-		return sentence
-			// فقط حروف و فاصله نگه دار
-			.replace(/[^\p{L}\s]/gu, ' ')
-			// lowercase
-			.toLowerCase()
-			// چند فاصله → یکی
-			.replace(/\s+/g, ' ')
-			// trim
-			.trim()
-			// کلمات کوتاه‌تر از minWordLength حذف
-			.split(' ')
-			.filter(w => w.length >= minWordLength && !/\d/.test(w))
-			.join(' ');
-		}
-		
+			return sentence
+				// جایگزینی اشتباهات رایج OCR
+				.replace(/\b0\b/g, 'o')      // 0 -> o
+				.replace(/\b1\b/g, 'l')      // 1 -> l
+				// فقط حروف و فاصله نگه دار
+				.replace(/[^\p{L}\s]/gu, ' ')
+				// lowercase
+				.toLowerCase()
+				// چند فاصله → یکی
+				.replace(/\s+/g, ' ')
+				// trim
+				.trim()
+				// کلمات کوتاه‌تر از minWordLength حذف و اعداد حذف
+				.split(' ')
+				.filter(w => w.length >= minWordLength && !/\d/.test(w))
+				.join(' ');
+		}		
 		function splitTextIntoChunks(text, chunkSize) {
 			const chunks = [];
 			let start = 0;
