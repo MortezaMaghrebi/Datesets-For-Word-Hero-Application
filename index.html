@@ -6,7 +6,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/compromise@latest/builds/compromise.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/stemmer@1.0.1/stemmer.min.js"></script>
+	<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #4f46e5;
@@ -372,6 +373,32 @@
                             حذف سازمان‌ها
                         </label>
                         <label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeIrregularVerbs" checked>
+                            <span class="checkmark"></span>
+                            حذف افعال بی قاعده
+                        </label>
+                        <label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeSimpleWords" checked>
+                            <span class="checkmark"></span>
+                            حذف کلمات آسان
+                        </label>
+                        <label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeNotInDictionary60000" checked>
+                            <span class="checkmark"></span>
+                            فیلتر بر اساس 60000 کلمه
+                        </label>
+                        <label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeNotInDictionary300000" checked>
+                            <span class="checkmark"></span>
+                            فیلتر بر اساس 3000000 کلمه
+                        </label>
+						<label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeNotStemmer" checked>
+                            <span class="checkmark"></span>
+                            ریشه یابی ظاهری کلمات
+                        </label>
+
+                         <label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="sortWords" >
                             <span class="checkmark"></span>
                             مرتب‌سازی بر اساس فراوانی
@@ -467,468 +494,598 @@
         <span id="notificationMessage">عملیات با موفقیت انجام شد</span>
     </div>
 
-    <script>
-        // Global variables
-        let processedWords = {};
-        let externalDictionary = new Set();
-        let stopWords = new Set();
-        
-        // Paths to external files
-        const DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
-        const STOPWORDS_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_stop.txt";
-        
-        // Initialize the app on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load saved text if it exists
-            const savedText = localStorage.getItem('extractorText');
-            if (savedText) {
-                document.getElementById('inputText').value = savedText;
-            }
-            
-            // Update word count on input
-            document.getElementById('inputText').addEventListener('input', updateWordCount);
-            updateWordCount();
-            
-            // Set the list tab as active by default
-            switchTab('list');
+<script>
+    // Global variables
+    let processedWords = {};
+    let externalDictionary = new Set();
+    let stopWords = new Set();
+    
+    // Paths to external files
+    const DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
+    const STOPWORDS_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_stop.txt";
+    
+    // Helper functions for simulating pass by reference
+    function createRef(initialValue = "") {
+        return { value: initialValue };
+    }
+    
+    // Stemmer functions
+    function isVowel(char) {
+        return ['a', 'e', 'i', 'o', 'u'].includes(char.toLowerCase());
+    }
 
-            // Load dictionary and stop words
-            Promise.all([fetchDictionary(), fetchStopWords()])
-                .then(() => {
-                    showNotification('لغت‌نامه و کلمات توقف با موفقیت بارگذاری شدند', 'success');
-                })
-                .catch(err => {
-                    console.error("Failed to load resources:", err);
-                    showNotification('خطا در بارگذاری منابع سیستم', 'error');
-                });
+    function endsWithRef(word, param, bodyRef, last1Ref, last2Ref, last3Ref) {
+        const w = word.length;
+        const p = param.length;
+        
+        if (w > p) {
+            if (word.substring(w - p) === param) {
+                const body = word.substring(0, w - p);
+                const last1 = w - p - 1 >= 0 ? word.substring(w - p - 1, w - p) : "";
+                const last2 = w - p - 2 >= 0 ? word.substring(w - p - 2, w - p - 1) : "";
+                const last3 = w - p - 3 >= 0 ? word.substring(w - p - 3, w - p - 2) : "";
+                
+                // Return values through object references
+                bodyRef.value = body;
+                last1Ref.value = last1;
+                last2Ref.value = last2;
+                last3Ref.value = last3;
+                
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function endsWith(word, param) {
+        const w = word.length;
+        const p = param.length;
+        
+        if (w >= p) {
+            return word.substring(w - p) === param;
+        }
+        return false;
+    }
+
+    function makeSimplestForm(word) {
+        if (!word || word.length < 2) return word;
+        
+        let simplest = "";
+        const bodyRef = createRef();
+        const last1Ref = createRef();
+        const last2Ref = createRef();
+        const last3Ref = createRef();
+        
+        if (endsWithRef(word, "ed", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            if (word.length < 4) simplest = word;
+            else if (last1Ref.value === "e" || last1Ref.value === "o" || last1Ref.value === "y") {
+                simplest = bodyRef.value + "e";
+            }
+            else if (last1Ref.value === "l" && last2Ref.value === "l") {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else if (last1Ref.value === last2Ref.value && !isVowel(last1Ref.value) && isVowel(last3Ref.value)) {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else if (last1Ref.value === "k" && last2Ref.value === "c") {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else simplest = bodyRef.value;
+        }
+        else if (endsWithRef(word, "ing", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            if (word.length < 5) simplest = word;
+            else if (last1Ref.value === "e" && (last2Ref.value === "e" || last2Ref.value === "o" || last2Ref.value === "y")) {
+                simplest = bodyRef.value;
+            }
+            else if (last1Ref.value === "l" && last2Ref.value === "l") {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else if (last1Ref.value === last2Ref.value && !isVowel(last1Ref.value) && isVowel(last3Ref.value)) {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else if (last1Ref.value === "k" && last2Ref.value === "c") {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else simplest = bodyRef.value;
+        }
+        else if (endsWithRef(word, "er", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            if (word.length < 4) simplest = word;
+            else if (last1Ref.value === "k" && last2Ref.value === "c") {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else simplest = bodyRef.value;
+        }
+        else if (endsWithRef(word, "'s", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            if (word.length < 4) simplest = word;
+            else simplest = bodyRef.value;
+        }
+        else if (endsWithRef(word, "es", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            if (word.length < 4) simplest = word;
+            else if ((last1Ref.value === "s" && last2Ref.value === "s")) {
+                simplest = bodyRef.value.substring(0, bodyRef.value.length - 1);
+            }
+            else if ((last1Ref.value === "s" && last2Ref.value === "h") || (last1Ref.value === "c" && last2Ref.value === "h")) {
+                simplest = bodyRef.value;
+            }
+            else if (last1Ref.value === "s" || last1Ref.value === "z" || last1Ref.value === "x") {
+                simplest = bodyRef.value;
+            }
+            else simplest = bodyRef.value;
+        }
+        else if (endsWithRef(word, "ies", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            if (word.length < 5) simplest = word;
+            else simplest = bodyRef.value + "y";
+        }
+        else if (endsWithRef(word, "s", bodyRef, last1Ref, last2Ref, last3Ref)) {
+            simplest = bodyRef.value;
+        }
+        else simplest = word;
+        
+        return simplest.substring(0, 1).toUpperCase() + simplest.substring(1).toLowerCase();
+    }
+
+    function stemmer(word) {
+        return makeSimplestForm(word.toLowerCase()).toLowerCase();
+    }
+
+    // Initialize the app on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load saved text if it exists
+        const savedText = localStorage.getItem('extractorText');
+        if (savedText) {
+            document.getElementById('inputText').value = savedText;
+        }
+        
+        // Update word count on input
+        document.getElementById('inputText').addEventListener('input', updateWordCount);
+        updateWordCount();
+        
+        // Set the list tab as active by default
+        switchTab('list');
+
+        // Load dictionary and stop words
+        Promise.all([fetchDictionary(), fetchStopWords()])
+            .then(() => {
+                showNotification('لغت‌نامه و کلمات توقف با موفقیت بارگذاری شدند', 'success');
+            })
+            .catch(err => {
+                console.error("Failed to load resources:", err);
+                showNotification('خطا در بارگذاری منابع سیستم', 'error');
+            });
+    });
+
+    // Fetch dictionary from external source
+    async function fetchDictionary() {
+        try {
+            showNotification('در حال بارگذاری لغت‌نامه...', 'info');
+            const response = await fetch(DICTIONARY_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            externalDictionary = new Set(words);
+            console.log("✅ Dictionary loaded:", externalDictionary.size, "words");
+        } catch (err) {
+            console.error("❌ Failed to load dictionary:", err);
+            showNotification('خطا در بارگذاری لغت‌نامه', 'error');
+        }
+    }
+
+    // Fetch stop words from external source
+    async function fetchStopWords() {
+        try {
+            showNotification('در حال بارگذاری کلمات توقف...', 'info');
+            const response = await fetch(STOPWORDS_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            stopWords = new Set(words);
+            console.log("✅ Stop words loaded:", stopWords.size);
+        } catch (err) {
+            console.error("❌ Failed to load stop words:", err);
+            showNotification('خطا در بارگذاری کلمات توقف', 'error');
+        }
+    }
+
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.getElementById('notification');
+        const icon = document.getElementById('notificationIcon');
+        const messageEl = document.getElementById('notificationMessage');
+        
+        // Set icon based on type
+        if (type === 'success') {
+            icon.className = 'fas fa-check-circle text-green-500 ml-2';
+        } else if (type === 'error') {
+            icon.className = 'fas fa-exclamation-circle text-red-500 ml-2';
+        } else {
+            icon.className = 'fas fa-info-circle text-blue-500 ml-2';
+        }
+        
+        // Set message and show
+        messageEl.textContent = message;
+        notification.className = `notification ${type} show`;
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
+
+    // Updates the word count displayed below the textarea
+    function updateWordCount() {
+        const text = document.getElementById('inputText').value;
+        const wordCount = text.trim() ? text.split(/\s+/).length : 0;
+        document.getElementById('wordCount').textContent = `${wordCount} کلمه`;
+    }
+
+    // Toggles the visibility of advanced options
+    function toggleAdvanced() {
+        const options = document.getElementById('advancedOptions');
+        options.classList.toggle('hidden');
+    }
+
+    // Switches between the different output tabs (cloud, list, stats)
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.add('hidden');
         });
+        
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        
+        document.getElementById(tabName + 'View').classList.remove('hidden');
+        document.getElementById(tabName + 'Tab').classList.add('active');
+    }
+    
+    // Updates the progress bar UI
+    function updateProgressBar(progress, status = '') {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressContainer = document.getElementById('progressBarContainer');
+        const loadingStatus = document.getElementById('loadingStatus');
 
-        // Fetch dictionary from external source
-        async function fetchDictionary() {
-            try {
-                showNotification('در حال بارگذاری لغت‌نامه...', 'info');
-                const response = await fetch(DICTIONARY_FILE_PATH);
-                if (!response.ok) throw new Error("HTTP error " + response.status);
+        progressBarContainer.classList.remove('hidden');
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${Math.round(progress)}%`;
         
-                const text = await response.text();
-                const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
-        
-                externalDictionary = new Set(words);
-                console.log("✅ Dictionary loaded:", externalDictionary.size, "words");
-            } catch (err) {
-                console.error("❌ Failed to load dictionary:", err);
-                showNotification('خطا در بارگذاری لغت‌نامه', 'error');
-            }
+        if (status && loadingStatus) {
+            loadingStatus.textContent = status;
         }
+    }
 
-        // Fetch stop words from external source
-        async function fetchStopWords() {
-            try {
-                showNotification('در حال بارگذاری کلمات توقف...', 'info');
-                const response = await fetch(STOPWORDS_FILE_PATH);
-                if (!response.ok) throw new Error("HTTP error " + response.status);
-        
-                const text = await response.text();
-                const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
-        
-                stopWords = new Set(words);
-                console.log("✅ Stop words loaded:", stopWords.size);
-            } catch (err) {
-                console.error("❌ Failed to load stop words:", err);
-                showNotification('خطا در بارگذاری کلمات توقف', 'error');
-            }
-        }
+    // Preprocess text
+    function preprocess(sentence, minWordLength = 3) {
+        return sentence
+            .replace(/\b0\b/g, 'o')      // 0 -> o
+            .replace(/\b1\b/g, 'l')      // 1 -> l
+            .replace(/[^\p{L}\s]/gu, ' ') // فقط حروف و فاصله نگه دار
+            .toLowerCase()                // lowercase
+            .replace(/\s+/g, ' ')         // چند فاصله → یکی
+            .trim()                       // trim
+            .split(' ')
+            .filter(w => w.length >= minWordLength && !/\d/.test(w))
+            .join(' ');
+    }
 
-        // Show notification
-        function showNotification(message, type = 'info') {
-            const notification = document.getElementById('notification');
-            const icon = document.getElementById('notificationIcon');
-            const messageEl = document.getElementById('notificationMessage');
-            
-            // Set icon based on type
-            if (type === 'success') {
-                icon.className = 'fas fa-check-circle text-green-500 ml-2';
-            } else if (type === 'error') {
-                icon.className = 'fas fa-exclamation-circle text-red-500 ml-2';
+    // Find word roots using our stemmer
+    function rootWord(word) {
+        return stemmer(word); // awareness -> aware
+    }
+
+    // Split text into chunks for processing
+    function splitTextIntoChunks(text, chunkSize) {
+        const chunks = [];
+        let start = 0;
+        while (start < text.length) {
+            let end = start + chunkSize;
+            if (end >= text.length) {
+                end = text.length;
             } else {
-                icon.className = 'fas fa-info-circle text-blue-500 ml-2';
+                let lastSpace = text.lastIndexOf(' ', end);
+                if (lastSpace > start) {
+                    end = lastSpace;
+                }
             }
-            
-            // Set message and show
-            messageEl.textContent = message;
-            notification.className = `notification ${type} show`;
-            
-            // Hide after 3 seconds
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+    
+            chunks.push(text.slice(start, end).trim());
+            start = end + 1;
         }
-
-        // Updates the word count displayed below the textarea
-        function updateWordCount() {
-            const text = document.getElementById('inputText').value;
-            const wordCount = text.trim() ? text.split(/\s+/).length : 0;
-            document.getElementById('wordCount').textContent = `${wordCount} کلمه`;
-        }
-
-        // Toggles the visibility of advanced options
-        function toggleAdvanced() {
-            const options = document.getElementById('advancedOptions');
-            options.classList.toggle('hidden');
-        }
-
-        // Switches between the different output tabs (cloud, list, stats)
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.add('hidden');
-            });
-            
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            
-            document.getElementById(tabName + 'View').classList.remove('hidden');
-            document.getElementById(tabName + 'Tab').classList.add('active');
-        }
+        return chunks;
+    }
+    
+    // Main function to extract and process words from the text
+    async function extractWords() {
+        const inputText = document.getElementById('inputText').value;
+        const wordCloud = document.getElementById('wordCloud');
+        const wordList = document.getElementById('wordList');
+        const outputDiv = document.getElementById('output');
+        const loadingDiv = document.getElementById('loading');
+        const progressBarContainer = document.getElementById('progressBarContainer');
         
-        // Updates the progress bar UI
-        function updateProgressBar(progress, status = '') {
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            const progressContainer = document.getElementById('progressBarContainer');
-            const loadingStatus = document.getElementById('loadingStatus');
+        // Clear previous results and show loading states
+        wordCloud.innerHTML = '';
+        wordList.innerHTML = '';
+        outputDiv.classList.add('hidden');
+        loadingDiv.style.display = 'flex';
+        processedWords = {}; // Reset word frequency counter
 
-            progressBarContainer.classList.remove('hidden');
-            progressBar.style.width = `${progress}%`;
-            progressText.textContent = `${Math.round(progress)}%`;
-            
-            if (status && loadingStatus) {
-                loadingStatus.textContent = status;
-            }
-        }
-
-        // Preprocess text
-        function preprocess(sentence, minWordLength = 3) {
-            return sentence
-                .replace(/\b0\b/g, 'o')      // 0 -> o
-                .replace(/\b1\b/g, 'l')      // 1 -> l
-                .replace(/[^\p{L}\s]/gu, ' ') // فقط حروف و فاصله نگه دار
-                .toLowerCase()                // lowercase
-                .replace(/\s+/g, ' ')         // چند فاصله → یکی
-                .trim()                       // trim
-                .split(' ')
-                .filter(w => w.length >= minWordLength && !/\d/.test(w))
-                .join(' ');
-        }
-
-        // Split text into chunks for processing
-        function splitTextIntoChunks(text, chunkSize) {
-            const chunks = [];
-            let start = 0;
-            while (start < text.length) {
-                let end = start + chunkSize;
-                if (end >= text.length) {
-                    end = text.length;
-                } else {
-                    let lastSpace = text.lastIndexOf(' ', end);
-                    if (lastSpace > start) {
-                        end = lastSpace;
-                    }
-                }
-        
-                chunks.push(text.slice(start, end).trim());
-                start = end + 1;
-            }
-            return chunks;
-        }
-        
-        // Main function to extract and process words from the text
-        async function extractWords() {
-            const inputText = document.getElementById('inputText').value;
-            const wordCloud = document.getElementById('wordCloud');
-            const wordList = document.getElementById('wordList');
-            const outputDiv = document.getElementById('output');
-            const loadingDiv = document.getElementById('loading');
-            const progressBarContainer = document.getElementById('progressBarContainer');
-            
-            // Clear previous results and show loading states
-            wordCloud.innerHTML = '';
-            wordList.innerHTML = '';
-            outputDiv.classList.add('hidden');
-            loadingDiv.style.display = 'flex';
-            processedWords = {}; // Reset word frequency counter
-
-            if (!inputText.trim()) {
-                loadingDiv.style.display = 'none';
-                showNotification('لطفا متنی را وارد کنید', 'error');
-                return;
-            }
-
-            localStorage.setItem('extractorText', inputText);
-
-            // Split the text into sentences to process in chunks
-            const sentences = inputText.split(/[.!؟\n]/);
-            const totalSentences = sentences.length;
-            let sentencesProcessed = 0;
-
-            // Get settings from UI
-            const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
-
-            updateProgressBar(0, 'آماده سازی متن...');
-            progressBarContainer.classList.remove('hidden');
-
-            // Process each sentence
-            for (const sentence of sentences) {
-                if (!sentence.trim()) {
-                    sentencesProcessed++;
-                    continue;
-                }
-
-                let cleaned = preprocess(sentence, minWordLength);
-                if (!cleaned) {
-                    sentencesProcessed++;
-                    continue;
-                }
-
-                let doc = nlp(cleaned);
-                
-                // Apply NLP transformations based on settings
-                if (document.getElementById('removePlurals').checked) {
-                    doc.nouns().toSingular();
-                }
-                if (document.getElementById('normalizeVerbs').checked) {
-                    doc.verbs().toInfinitive();
-                }
-                
-                let terms = doc.terms().out('array');
-                
-                // Remove entities based on settings
-                let removeEntities = [];
-                if (document.getElementById('removePeople').checked) removeEntities.push(...doc.people().out('array'));
-                if (document.getElementById('removePlaces').checked) removeEntities.push(...doc.places().out('array'));
-                if (document.getElementById('removeOrganizations').checked) removeEntities.push(...doc.organizations().out('array'));
-                
-                const finalWords = terms.filter(word => !removeEntities.includes(word));
-                
-                // Count words
-                for (const w of finalWords) {
-                    processedWords[w] = (processedWords[w] || 0) + 1;
-                }
-                
-                sentencesProcessed++;
-                const progress = (sentencesProcessed / totalSentences) * 100;
-                updateProgressBar(progress, `پردازش جمله ${sentencesProcessed} از ${totalSentences}`);
-
-                // Pause to allow UI updates and prevent freezing
-                await new Promise(resolve => setTimeout(resolve, 10));
-            }
-            
-            // Final processing after all sentences are done
-            const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
-            const filteredWordFreq = Object.fromEntries(
-                Object.entries(processedWords).filter(([word, freq]) =>
-                    (freq >= minFrequency) && 
-                    externalDictionary.has(word.toLowerCase()) && 
-                    (!stopWords.has(word.toLowerCase()))
-                )
-            );
-
-            // Check if sorting is enabled
-            const shouldSort = document.getElementById('sortWords').checked;
-            
-            let sortedWords;
-            if (shouldSort) {
-                // Sort by frequency (descending)
-                sortedWords = Object.entries(filteredWordFreq)
-                    .sort((a, b) => b[1] - a[1]);
-            } else {
-                // Keep original order (as they appear in text)
-                sortedWords = Object.entries(filteredWordFreq);
-            }
-
-            // Display the final results
-            displayResults(sortedWords, inputText, Object.values(processedWords));
-
+        if (!inputText.trim()) {
             loadingDiv.style.display = 'none';
-            progressBarContainer.classList.add('hidden');
-            outputDiv.classList.remove('hidden');
-            outputDiv.classList.add('fade-in');
+            showNotification('لطفا متنی را وارد کنید', 'error');
+            return;
+        }
 
-            if (sortedWords.length === 0) {
-                wordCloud.innerHTML = '<p class="text-gray-500 text-center py-10">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
-                wordList.innerHTML = '<p class="text-gray-500 text-center py-10">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
-                showNotification('هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.', 'info');
-            } else {
-                showNotification(`استخراج ${sortedWords.length} کلمه معنی‌دار با موفقیت انجام شد`, 'success');
+        localStorage.setItem('extractorText', inputText);
+
+        // Split the text into sentences to process in chunks
+        const sentences = inputText.split(/[.!؟\n]/);
+        const totalSentences = sentences.length;
+        let sentencesProcessed = 0;
+
+        // Get settings from UI
+        const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
+
+        updateProgressBar(0, 'آماده سازی متن...');
+        progressBarContainer.classList.remove('hidden');
+
+        // Process each sentence
+        for (const sentence of sentences) {
+            if (!sentence.trim()) {
+                sentencesProcessed++;
+                continue;
             }
+
+            let cleaned = preprocess(sentence, minWordLength);
+            if (!cleaned) {
+                sentencesProcessed++;
+                continue;
+            }
+
+            let doc = nlp(cleaned);
+            
+            // Apply NLP transformations based on settings
+            if (document.getElementById('removePlurals').checked) {
+                doc.nouns().toSingular();
+            }
+            if (document.getElementById('normalizeVerbs').checked) {
+                doc.verbs().toInfinitive();
+            }
+            
+            let terms = doc.terms().out('array');
+            
+            // Remove entities based on settings
+            let removeEntities = [];
+            if (document.getElementById('removePeople').checked) removeEntities.push(...doc.people().out('array'));
+            if (document.getElementById('removePlaces').checked) removeEntities.push(...doc.places().out('array'));
+            if (document.getElementById('removeOrganizations').checked) removeEntities.push(...doc.organizations().out('array'));
+            
+            let finalWords = terms.map(w => rootWord(w))
+                          .filter(w => !removeEntities.includes(w));
+
+            
+            // Count words
+            for (const w of finalWords) {
+                processedWords[w] = (processedWords[w] || 0) + 1;
+            }
+            
+            sentencesProcessed++;
+            const progress = (sentencesProcessed / totalSentences) * 100;
+            updateProgressBar(progress, `پردازش جمله ${sentencesProcessed} از ${totalSentences}`);
+
+            // Pause to allow UI updates and prevent freezing
+            await new Promise(resolve => setTimeout(resolve, 10));
         }
         
-        // Displays the final results in the word cloud, list, and stats tabs
-        function displayResults(sortedWords, inputText, words) {
-            const wordCloud = document.getElementById('wordCloud');
-            const wordList = document.getElementById('wordList');
-            const shouldSort = document.getElementById('sortWords').checked;
+        // Final processing after all sentences are done
+        const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
+        const filteredWordFreq = Object.fromEntries(
+            Object.entries(processedWords).filter(([word, freq]) =>
+                (freq >= minFrequency) && 
+                externalDictionary.has(word.toLowerCase()) && 
+                (!stopWords.has(word.toLowerCase()))
+            )
+        );
 
-            // Update list title based on sorting preference
-            const listTitle = document.querySelector('#listView h2');
-            listTitle.textContent = shouldSort 
-                ? 'لیست کلمات به ترتیب فراوانی' 
-                : 'لیست کلمات به ترتیب ظاهر شدن در متن';
-
-            wordCloud.innerHTML = '';
-            wordList.innerHTML = '';
-
-            // Create word cloud
-            if (sortedWords.length > 0) {
-                sortedWords.forEach(([word, freq]) => {
-                    const span = document.createElement('span');
-                    span.className = 'tooltip';
-                    span.innerHTML = `${word}`;
-                    span.title = `تعداد: ${freq}`;
-                    span.style.fontSize = `${Math.min(16 + freq * 2, 28)}px`;
-                    span.style.opacity = `${Math.min(0.4 + freq / sortedWords[0][1], 1)}`;
-                    wordCloud.appendChild(span);
-                });
-            } else {
-                wordCloud.innerHTML = '<p class="text-gray-500">هیچ کلمه معنی‌داری یافت نشد</p>';
-            }
-
-            // Create word list
-            if (sortedWords.length > 0) {
-                sortedWords.forEach(([word, freq]) => {
-                    const div = document.createElement('div');
-                    div.className = 'word-item';
-                    div.innerHTML = `
-                        <span class="font-medium">${word}</span>
-                        <span class="bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm font-bold">${freq}</span>
-                    `;
-                    wordList.appendChild(div);
-                });
-            } else {
-                wordList.innerHTML = '<p class="text-gray-500 text-center py-10">هیچ کلمه معنی‌داری یافت نشد</p>';
-            }
-
-            displayStatistics(inputText, words, sortedWords);
+        // Check if sorting is enabled
+        const shouldSort = document.getElementById('sortWords').checked;
+        
+        let sortedWords;
+        if (shouldSort) {
+            // Sort by frequency (descending)
+            sortedWords = Object.entries(filteredWordFreq)
+                .sort((a, b) => b[1] - a[1]);
+        } else {
+            // Keep original order (as they appear in text)
+            sortedWords = Object.entries(filteredWordFreq);
         }
 
-        // Displays text statistics in the stats tab
-        function displayStatistics(text, words, sortedWords) {
-            const statsDiv = document.getElementById('textStats');
-            statsDiv.innerHTML = '';
-            
-            const totalWords = text.split(/\s+/).length;
-            const uniqueWords = sortedWords.length;
-            const meaningfulWords = words.length;
-            
-            // Find most frequent word only if sorting is enabled
-            let mostFrequent = 'یافت نشد';
-            if (document.getElementById('sortWords').checked && sortedWords.length) {
-                mostFrequent = `${sortedWords[0][0]} (${sortedWords[0][1]} بار)`;
-            }
-            
-            const stats = [
-                { title: 'تعداد کل کلمات', value: totalWords, icon: 'fas fa-font', color: 'text-indigo-500' },
-                { title: 'تعداد کلمات معنی‌دار', value: meaningfulWords, icon: 'fas fa-star', color: 'text-amber-500' },
-                { title: 'تعداد کلمات منحصر به فرد', value: uniqueWords, icon: 'fas fa-key', color: 'text-green-500' },
-                { title: 'پرتکرارترین کلمه', value: mostFrequent, icon: 'fas fa-crown', color: 'text-purple-500' },
-                { title: 'تنوع واژگان', value: (meaningfulWords > 0) ? `${((uniqueWords / meaningfulWords) * 100).toFixed(1)}%` : '0%', icon: 'fas fa-chart-pie', color: 'text-blue-500' },
-                { title: 'میانگین فراوانی کلمات', value: (uniqueWords > 0) ? (meaningfulWords / uniqueWords).toFixed(1) : '0', icon: 'fas fa-calculator', color: 'text-red-500' }
-            ];
-            
-            stats.forEach(stat => {
+        // Display the final results
+        displayResults(sortedWords, inputText, Object.values(processedWords));
+
+        loadingDiv.style.display = 'none';
+        progressBarContainer.classList.add('hidden');
+        outputDiv.classList.remove('hidden');
+        outputDiv.classList.add('fade-in');
+
+        if (sortedWords.length === 0) {
+            wordCloud.innerHTML = '<p class="text-gray-500 text-center py-10">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
+            wordList.innerHTML = '<p class="text-gray-500 text-center py-10">هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.</p>';
+            showNotification('هیچ کلمه معنی‌داری یافت نشد. لطفا تنظیمات را تغییر دهید.', 'info');
+        } else {
+            showNotification(`استخراج ${sortedWords.length} کلمه معنی‌دار با موفقیت انجام شد`, 'success');
+        }
+    }
+    
+    // Displays the final results in the word cloud, list, and stats tabs
+    function displayResults(sortedWords, inputText, words) {
+        const wordCloud = document.getElementById('wordCloud');
+        const wordList = document.getElementById('wordList');
+        const shouldSort = document.getElementById('sortWords').checked;
+
+        // Update list title based on sorting preference
+        const listTitle = document.querySelector('#listView h2');
+        listTitle.textContent = shouldSort 
+            ? 'لیست کلمات به ترتیب فراوانی' 
+            : 'لیست کلمات به ترتیب ظاهر شدن در متن';
+
+        wordCloud.innerHTML = '';
+        wordList.innerHTML = '';
+
+        // Create word cloud
+        if (sortedWords.length > 0) {
+            sortedWords.forEach(([word, freq]) => {
+                const span = document.createElement('span');
+                span.className = 'tooltip';
+                span.innerHTML = `${word}`;
+                span.title = `تعداد: ${freq}`;
+                span.style.fontSize = `${Math.min(16 + freq * 2, 28)}px`;
+                span.style.opacity = `${Math.min(0.4 + freq / sortedWords[0][1], 1)}`;
+                wordCloud.appendChild(span);
+            });
+        } else {
+            wordCloud.innerHTML = '<p class="text-gray-500">هیچ کلمه معنی‌داری یافت نشد</p>';
+        }
+
+        // Create word list
+        if (sortedWords.length > 0) {
+            sortedWords.forEach(([word, freq]) => {
                 const div = document.createElement('div');
-                div.className = 'stat-card';
+                div.className = 'word-item';
                 div.innerHTML = `
-                    <div class="flex items-center mb-3">
-                        <i class="${stat.icon} ${stat.color} text-xl ml-3"></i>
-                        <div class="text-gray-700 font-medium">${stat.title}</div>
-                    </div>
-                    <div class="text-2xl font-bold text-gray-800">${stat.value}</div>
+                    <span class="font-medium">${word}</span>
+                    <span class="bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm font-bold">${freq}</span>
                 `;
-                statsDiv.appendChild(div);
+                wordList.appendChild(div);
             });
+        } else {
+            wordList.innerHTML = '<p class="text-gray-500 text-center py-10">هیچ کلمه معنی‌داری یافت نشد</p>';
         }
 
-        // Clears the text area and results
-        function clearText() {
-            if (confirm('آیا از پاک کردن متن اطمینان دارید؟')) {
-                document.getElementById('inputText').value = '';
-                document.getElementById('output').classList.add('hidden');
+        displayStatistics(inputText, words, sortedWords);
+    }
+
+    // Displays text statistics in the stats tab
+    function displayStatistics(text, words, sortedWords) {
+        const statsDiv = document.getElementById('textStats');
+        statsDiv.innerHTML = '';
+        
+        const totalWords = text.split(/\s+/).length;
+        const uniqueWords = sortedWords.length;
+        const meaningfulWords = words.length;
+        
+        // Find most frequent word only if sorting is enabled
+        let mostFrequent = 'یافت نشد';
+        if (document.getElementById('sortWords').checked && sortedWords.length) {
+            mostFrequent = `${sortedWords[0][0]} (${sortedWords[0][1]} بار)`;
+        }
+        
+        const stats = [
+            { title: 'تعداد کل کلمات', value: totalWords, icon: 'fas fa-font', color: 'text-indigo-500' },
+            { title: 'تعداد کلمات معنی‌دار', value: meaningfulWords, icon: 'fas fa-star', color: 'text-amber-500' },
+            { title: 'تعداد کلمات منحصر به فرد', value: uniqueWords, icon: 'fas fa-key', color: 'text-green-500' },
+            { title: 'پرتکرارترین کلمه', value: mostFrequent, icon: 'fas fa-crown', color: 'text-purple-500' },
+            { title: 'تنوع واژگان', value: (meaningfulWords > 0) ? `${((uniqueWords / meaningfulWords) * 100).toFixed(1)}%` : '0%', icon: 'fas fa-chart-pie', color: 'text-blue-500' },
+            { title: 'میانگین فراوانی کلمات', value: (uniqueWords > 0) ? (meaningfulWords / uniqueWords).toFixed(1) : '0', icon: 'fas fa-calculator', color: 'text-red-500' }
+        ];
+        
+        stats.forEach(stat => {
+            const div = document.createElement('div');
+            div.className = 'stat-card';
+            div.innerHTML = `
+                <div class="flex items-center mb-3">
+                    <i class="${stat.icon} ${stat.color} text-xl ml-3"></i>
+                    <div class="text-gray-700 font-medium">${stat.title}</div>
+                </div>
+                <div class="text-2xl font-bold text-gray-800">${stat.value}</div>
+            `;
+            statsDiv.appendChild(div);
+        });
+    }
+
+    // Clears the text area and results
+    function clearText() {
+        if (confirm('آیا از پاک کردن متن اطمینان دارید؟')) {
+            document.getElementById('inputText').value = '';
+            document.getElementById('output').classList.add('hidden');
+            updateWordCount();
+            localStorage.removeItem('extractorText');
+            showNotification('متن با موفقیت پاک شد', 'success');
+        }
+    }
+
+    // Saves the text from the input to a local file
+    function saveText() {
+        const text = document.getElementById('inputText').value;
+        if (!text.trim()) {
+            showNotification('متنی برای ذخیره کردن وجود ندارد', 'error');
+            return;
+        }
+        
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'extracted-text.txt';
+        a.click();
+        
+        URL.revokeObjectURL(url);
+    }
+
+    // Loads a text file from the user's computer
+    function loadText() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.text';
+        
+        input.onchange = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('inputText').value = e.target.result;
                 updateWordCount();
-                localStorage.removeItem('extractorText');
-                showNotification('متن با موفقیت پاک شد', 'success');
-            }
-        }
-
-        // Saves the text from the input to a local file
-        function saveText() {
-            const text = document.getElementById('inputText').value;
-            if (!text.trim()) {
-                showNotification('متنی برای ذخیره کردن وجود ندارد', 'error');
-                return;
-            }
-            
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            
-           
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'extracted-text.txt';
-            a.click();
-            
-            URL.revokeObjectURL(url);
-        }
-
-        // Loads a text file from the user's computer
-        function loadText() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.txt,.text';
-            
-            input.onchange = function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('inputText').value = e.target.result;
-                    updateWordCount();
-                };
-                reader.readAsText(file);
             };
-            
-            input.click();
-        }
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
 
-        // Saves the word list to a local file
-        function saveWordList() {
-            const wordListItems = document.querySelectorAll('#wordList > div');
-            if (wordListItems.length === 0) {
-                 window.alert('لیست کلمات خالی است. لطفا ابتدا متن را استخراج کنید.');
-                 return;
-            }
-            
-            let content = '';
-            wordListItems.forEach(item => {
-                const wordText = item.querySelector('span').textContent;
-                const parts = wordText.split(' (');
-                const word = parts[0];
-                const count = item.querySelector('.bg-indigo-100').textContent;
-                
-                content += `${word} #${count}\n`;
-            });
-            
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'word-list.txt';
-            a.click();
-            
-            URL.revokeObjectURL(url);
+    // Saves the word list to a local file
+    function saveWordList() {
+        const wordListItems = document.querySelectorAll('#wordList > div');
+        if (wordListItems.length === 0) {
+             window.alert('لیست کلمات خالی است. لطفا ابتدا متن را استخراج کنید.');
+             return;
         }
-    </script>
+        
+        let content = '';
+        wordListItems.forEach(item => {
+            const wordText = item.querySelector('span').textContent;
+            const parts = wordText.split(' (');
+            const word = parts[0];
+            const count = item.querySelector('.bg-indigo-100').textContent;
+            
+            content += `${word} #${count}\n`;
+        });
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'word-list.txt';
+        a.click();
+        
+        URL.revokeObjectURL(url);
+    }
+</script>
 </body>
 </html>
