@@ -1,14 +1,10 @@
-
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>استخراج کننده کلمات معنی دار با معنی فارسی</title>
-    <!-- Tailwind CSS for modern styling -->
+    <title>استخراج کننده کلمات معنی دار انگلیسی</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Compromise.js for natural language processing -->
     <script src="https://cdn.jsdelivr.net/npm/compromise@latest/builds/compromise.min.js"></script>
     <style>
         body {
@@ -97,7 +93,7 @@
 <body class="min-h-screen p-4 md:p-6">
     <div class="max-w-5xl mx-auto bg-white p-4 md:p-6 rounded-2xl shadow-xl">
         <h1 class="text-2xl md:text-3xl font-bold mb-2 text-indigo-600 text-center">
-            <i class="fas fa-language mr-2"></i>استخراج کننده کلمات معنی دار با معنی فارسی
+            <i class="fas fa-language mr-2"></i>استخراج کننده کلمات معنی دار انگلیسی
         </h1>
         <p class="text-gray-600 mb-4 md:mb-6 text-center text-sm md:text-base">متن انگلیسی خود را وارد کنید تا کلمات کلیدی به همراه معنی فارسی استخراج شوند</p>
         
@@ -145,7 +141,7 @@
             </div>
         </div>
         
-        <textarea id="inputText" class="w-full p-3 md:p-4 border rounded-md mb-4 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300" rows="6" placeholder="متن انگلیسی خود را اینجا وارد کنید..."></textarea>
+        <textarea id="inputText" class="w-full p-3 md:p-4 border rounded-md mb-4 focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300" rows="10" placeholder="متن انگلیسی خود را اینجا وارد کنید..."></textarea>
         
         <div class="flex justify-between items-center mb-4">
             <div class="text-sm text-gray-500" id="wordCount">0 کلمه</div>
@@ -155,19 +151,18 @@
             </button>
         </div>
         
-        <!-- Loading spinner and progress bar -->
         <div id="loading" class="text-center py-4">
             <div class="inline-flex items-center">
                 <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 ml-2"></div>
                 در حال پردازش...
             </div>
         </div>
-		
-		<div id="progressBarContainer" class="w-full h-4 bg-gray-100 rounded-full mt-4 relative overflow-hidden hidden">
-			<div id="progressBar" class="h-full bg-indigo-500 transition-all duration-100 ease-in-out" style="width: 0%;"></div>
-			<span id="progressText" class="absolute inset-0 flex items-center justify-center text-xs text-black">در حال پردازش... 0%</span>
-		</div>
-		
+        
+        <div id="progressBarContainer" class="w-full h-4 bg-gray-100 rounded-full mt-4 relative overflow-hidden hidden">
+            <div id="progressBar" class="h-full bg-indigo-500 transition-all duration-100 ease-in-out" style="width: 0%;"></div>
+            <span id="progressText" class="absolute inset-0 flex items-center justify-center text-xs text-black">در حال پردازش... 0%</span>
+        </div>
+        
         <div id="output" class="mt-6 hidden">
             <div class="flex flex-wrap justify-between items-center mb-4">
                 <div class="flex border-b">
@@ -209,27 +204,7 @@
     </div>
 
     <script>
-        // A simple dictionary for Persian meanings
-        const farsiDictionary = {
-            'hello': 'سلام', 'world': 'جهان', 'good': 'خوب', 'morning': 'صبح', 'computer': 'کامپیوتر',
-            'program': 'برنامه', 'code': 'کد', 'language': 'زبان', 'english': 'انگلیسی', 'learning': 'یادگیری',
-            'book': 'کتاب', 'read': 'خواندن', 'write': 'نوشتن', 'text': 'متن', 'word': 'کلمه', 'meaning': 'معنی',
-            'extract': 'استخراج', 'analysis': 'تحلیل', 'data': 'داده', 'information': 'اطلاعات', 'knowledge': 'دانش',
-            'education': 'آموزش', 'student': 'دانشجو', 'teacher': 'معلم', 'school': 'مدرسه', 'university': 'دانشگاه',
-            'study': 'مطالعه', 'research': 'تحقیق', 'science': 'علم', 'technology': 'فناوری', 'software': 'نرم‌افزار',
-            'hardware': 'سخت‌افزار', 'internet': 'اینترنت', 'website': 'وب‌سایت', 'page': 'صفحه', 'content': 'محتوا',
-            'development': 'توسعه', 'design': 'طراحی', 'project': 'پروژه', 'work': 'کار', 'time': 'زمان',
-            'day': 'روز', 'night': 'شب', 'week': 'هفته', 'month': 'ماه', 'year': 'سال', 'people': 'مردم',
-            'person': 'شخص', 'man': 'مرد', 'woman': 'زن', 'child': 'کودک', 'family': 'خانواده', 'friend': 'دوست',
-            'home': 'خانه', 'city': 'شهر', 'country': 'کشور', 'water': 'آب', 'food': 'غذا', 'health': 'سلامتی',
-            'life': 'زندگی', 'love': 'عشق', 'art': 'هنر', 'music': 'موسیقی', 'film': 'فیلم', 'game': 'بازی',
-            'sport': 'ورزش', 'travel': 'سفر', 'car': 'ماشین', 'money': 'پول', 'business': 'کسب‌وکار', 'job': 'شغل',
-            'market': 'بازار', 'number': 'عدد', 'system': 'سیستم', 'problem': 'مشکل', 'solution': 'راه‌حل',
-            'question': 'سؤال', 'answer': 'جواب', 'example': 'مثال', 'important': 'مهم', 'different': 'متفاوت',
-            'beautiful': 'زیبا', 'strong': 'قوی', 'young': 'جوان', 'old': 'قدیمی', 'new': 'جدید', 'first': 'اول',
-            'last': 'آخر', 'next': 'بعدی', 'big': 'بزرگ', 'small': 'کوچک', 'long': 'بلند', 'short': 'کوتاه',
-            'high': 'بالا', 'low': 'پایین', 'right': 'راست', 'left': 'چپ', 'true': 'درست', 'false': 'نادرست'
-        };
+
 
         // List of common stop words to filter out
         const stopWords = new Set([
@@ -245,10 +220,31 @@
         // A global object to store word frequencies during chunked processing
         let processedWords = {};
         
-        // Function to get the Persian meaning of a word from the dictionary
-        function getFarsiMeaning(word) {
-            return farsiDictionary[word] || 'معنی یافت نشد';
-        }
+        // --- NEW FEATURE: Load and store external dictionary ---
+        let externalDictionary = new Set();
+        // Change 'your-large-dictionary-file.txt' to the actual path of your file
+        const DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
+
+        
+        async function fetchDictionary() {
+			try {
+				const response = await fetch(DICTIONARY_FILE_PATH);
+				if (!response.ok) throw new Error("HTTP error " + response.status);
+		
+				const text = await response.text();
+				const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+		
+				externalDictionary = new Set(words);
+		
+				console.log("✅ Dictionary loaded:", externalDictionary.size, "words");
+				console.log("apple in dict?", externalDictionary.has("apple"));
+			} catch (err) {
+				console.error("❌ Failed to load dictionary:", err);
+			}
+		}
+        // --- END OF NEW FEATURE CODE ---
+
+
 
         // Initialize the app on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -264,6 +260,10 @@
             
             // Set the list tab as active by default
             switchTab('list');
+
+            // --- NEW: Call the function to load the dictionary on page load ---
+            fetchDictionary();
+            // --- END NEW CODE ---
         });
 
         // Updates the word count displayed below the textarea
@@ -299,11 +299,27 @@
             const progressText = document.getElementById('progressText');
             const progressContainer = document.getElementById('progressBarContainer');
 
-            progressContainer.classList.remove('hidden');
+            progressBarContainer.classList.remove('hidden');
             progressBar.style.width = `${progress}%`;
             progressText.textContent = `در حال پردازش... ${Math.round(progress)}%`;
         }
 
+		function preprocess(sentence, minWordLength = 3) {
+		return sentence
+			// فقط حروف و فاصله نگه دار
+			.replace(/[^\p{L}\s]/gu, ' ')
+			// lowercase
+			.toLowerCase()
+			// چند فاصله → یکی
+			.replace(/\s+/g, ' ')
+			// trim
+			.trim()
+			// کلمات کوتاه‌تر از minWordLength حذف
+			.split(' ')
+			.filter(w => w.length >= minWordLength && !/\d/.test(w))
+			.join(' ');
+		}
+		
         // Main function to extract and process words from the text
         async function extractWords() {
             const inputText = document.getElementById('inputText').value;
@@ -344,42 +360,36 @@
                     continue;
                 }
 
-                let doc = nlp(sentence);
-
-                // Apply user-selected filters
-                if (document.getElementById('removePlurals').checked) {
-                    doc.nouns().toSingular();
-                }
-                if (document.getElementById('normalizeVerbs').checked) {
-                    doc.verbs().toInfinitive();
-                }
-                // More specific filtering for entities
-                // دریافت کلمات کلیدی و فیلتر کردن آن‌ها
-                let terms = doc.terms();
+                let cleaned = preprocess(sentence, 3);
+				let doc = nlp(cleaned);
+				
+				// --- ادامه پردازش NLP ---
+				if (document.getElementById('removePlurals').checked) {
+					doc.nouns().toSingular();
+				}
+				if (document.getElementById('normalizeVerbs').checked) {
+					doc.verbs().toInfinitive();
+				}
+				
+				let terms = doc.terms().out('array');
+				
+				// حذف entity ها
+				let removeEntities = [];
+				if (document.getElementById('removePeople').checked) removeEntities.push(...doc.people().out('array'));
+				if (document.getElementById('removePlaces').checked) removeEntities.push(...doc.places().out('array'));
+				if (document.getElementById('removeOrganizations').checked) removeEntities.push(...doc.organizations().out('array'));
+				
+				const finalWords = terms.filter(word =>
+				!stopWords.has(word) &&
+				!removeEntities.includes(word)
+				);
+				
+				// ✅ شمارش کلمات
+				for (const w of finalWords) {
+					processedWords[w] = (processedWords[w] || 0) + 1;
+				}
                 
-                // فیلتر کردن اشخاص، مکان‌ها و سازمان‌ها
-                if (document.getElementById('removePeople').checked) {
-                    terms = terms.not(doc.people());
-                }
-                if (document.getElementById('removePlaces').checked) {
-                    terms = terms.not(doc.places());
-                }
-                if (document.getElementById('removeOrganizations').checked) {
-                    terms = terms.not(doc.organizations());
-                }
-
-                const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
-                const words = terms.out('array')
-                    .map(word => word.toLowerCase().replace(/[^\w\s]|_/g, ''))
-                    .filter(word => word.length >= minWordLength && !stopWords.has(word) && !/\d/.test(word))
-                    .filter(word => word);
-
-                // Aggregate word frequencies
-                words.forEach(word => {
-                    processedWords[word] = (processedWords[word] || 0) + 1;
-                });
-
-                chunksProcessed++;
+				chunksProcessed++;
                 const progress = (chunksProcessed / totalChunks) * 100;
                 updateProgressBar(progress);
 
@@ -389,9 +399,11 @@
             
             // Final processing after all chunks are done
             const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
-            const filteredWordFreq = Object.fromEntries(
-                Object.entries(processedWords).filter(([word, freq]) => freq >= minFrequency)
-            );
+			const filteredWordFreq = Object.fromEntries(
+				Object.entries(processedWords).filter(([word, freq]) =>
+					freq >= minFrequency && externalDictionary.has(word.toLowerCase()) // ✅ اینجا چک دیکشنری
+				)
+			);
 
             const sortedWords = Object.entries(filteredWordFreq)
                 .sort((a, b) => b[1] - a[1]);
@@ -416,22 +428,20 @@
             const wordList = document.getElementById('wordList');
 
             sortedWords.forEach(([word, freq]) => {
-                const farsiMeaning = getFarsiMeaning(word);
                 const span = document.createElement('span');
                 span.className = 'tooltip';
-                span.innerHTML = `${word} <span class="text-indigo-600">(${farsiMeaning})</span>`;
-                span.title = `معنی: ${farsiMeaning} | تعداد: ${freq}`;
+                span.innerHTML = `${word}`;
+                span.title = `تعداد: ${freq}`;
                 span.style.fontSize = `${Math.min(16 + freq * 2, 28)}px`;
                 span.style.opacity = `${Math.min(0.4 + freq / sortedWords[0][1], 1)}`;
                 wordCloud.appendChild(span);
             });
 
             sortedWords.forEach(([word, freq]) => {
-                const farsiMeaning = getFarsiMeaning(word);
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center py-3 px-4 border-b hover:bg-gray-50';
                 div.innerHTML = `
-                    <span>${word} <span class="text-indigo-600 text-sm">(${farsiMeaning})</span></span>
+                    <span>${word} </span>
                     <span class="bg-indigo-100 text-indigo-800 rounded-full px-3 py-1 text-sm">${freq}</span>
                 `;
                 wordList.appendChild(div);
@@ -537,7 +547,7 @@
                 const meaning = parts[1].replace(')', '');
                 const count = item.querySelector('.bg-indigo-100').textContent;
                 
-                content += `${word}#${meaning}#${count}\n`;
+                content += `${word} #${count}\n`;
             });
             
             const blob = new Blob([content], { type: 'text/plain' });
