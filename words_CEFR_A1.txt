@@ -68,7 +68,6 @@ bill
 bird
 birthday
 black
-blog
 blonde
 blue
 boat
@@ -199,7 +198,6 @@ dress
 drink
 drive
 driver
-dvd
 ear
 early
 east
@@ -395,7 +393,6 @@ sun
 lamp
 like
 similar
-sth
 pleasant
 line
 lion
@@ -765,7 +762,6 @@ water
 way
 wear
 weather
-website
 wednesday
 week
 weekend
@@ -796,3 +792,5 @@ yellow
 yes
 yesterday
 young
+excite
+marry
