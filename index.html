@@ -393,7 +393,7 @@
                             فیلتر بر اساس دیکشنری بزرگ
                         </label>
 						<label class="custom-checkbox flex items-center">
-                            <input type="checkbox" id="removeNotStemmer" checked>
+                            <input type="checkbox" id="removeNotStemmer" >
                             <span class="checkmark"></span>
                             ریشه یابی ظاهری کلمات
                         </label>
@@ -834,10 +834,7 @@
             .join(' ');
     }
 
-    // Find word roots using our stemmer
-    function rootWord(word) {
-        return stemmer(word); // awareness -> aware
-    }
+
 
     // Split text into chunks for processing
     function splitTextIntoChunks(text, chunkSize) {
@@ -891,10 +888,17 @@
 
         // Get settings from UI
         const minWordLength = parseInt(document.getElementById('minWordLength').value) || 3;
+		const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
+		const filterSmallDictionary = document.getElementById('removeNotInDictionary60000').checked;
+		const filterLargeDictionary = document.getElementById('removeNotInDictionary300000').checked;
+		const filterSimpleWords =  document.getElementById('removeSimpleWords').checked;
+		const filterIrregularVerbs =  document.getElementById('removeIrregularVerbs').checked;
+		const filterStemmer =  document.getElementById('removeNotStemmer').checked;
+		
 
         updateProgressBar(0, 'آماده سازی متن...');
         progressBarContainer.classList.remove('hidden');
-
+		
         // Process each sentence
         for (const sentence of sentences) {
             if (!sentence.trim()) {
@@ -926,9 +930,13 @@
             if (document.getElementById('removePlaces').checked) removeEntities.push(...doc.places().out('array'));
             if (document.getElementById('removeOrganizations').checked) removeEntities.push(...doc.organizations().out('array'));
             
-            let finalWords = terms.map(w => rootWord(w))
-                          .filter(w => !removeEntities.includes(w));
-
+            let finalWords;
+			if (filterStemmer) {
+				finalWords = terms.map(w => stemmer(w))
+								.filter(w => !removeEntities.includes(w));
+			} else {
+				finalWords = terms.filter(w => !removeEntities.includes(w));
+			}
             
             // Count words
             for (const w of finalWords) {
@@ -943,14 +951,8 @@
             await new Promise(resolve => setTimeout(resolve, 10));
         }
         
+        
         // Final processing after all sentences are done
-        const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
-		const filterSmallDictionary = document.getElementById('removeNotInDictionary60000').checked;
-		const filterLargeDictionary = document.getElementById('removeNotInDictionary300000').checked;
-		const filterSimpleWords =  document.getElementById('removeSimpleWords').checked;
-		const filterIrregularVerbs =  document.getElementById('removeIrregularVerbs').checked;
-		const filterStemmer =  document.getElementById('removeNotStemmer').checked;
-		
         const filteredWordFreq = Object.fromEntries(
             Object.entries(processedWords).filter(([word, freq]) =>
                 (freq >= minFrequency) && 
@@ -1144,7 +1146,7 @@
             const word = parts[0];
             const count = item.querySelector('.bg-indigo-100').textContent;
             
-            content += `${word} #${count}\n`;
+            content += `${word}\n`;
         });
         
         const blob = new Blob([content], { type: 'text/plain' });
