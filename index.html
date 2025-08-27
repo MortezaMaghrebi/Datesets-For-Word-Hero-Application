@@ -378,9 +378,9 @@
                             حذف افعال بی قاعده
                         </label>
                         <label class="custom-checkbox flex items-center">
-                            <input type="checkbox" id="removeSimpleWords" checked>
+                            <input type="checkbox" id="removeSimpleWords" >
                             <span class="checkmark"></span>
-                            حذف کلمات آسان
+                            حذف کلمات آسان دبیرستان
                         </label>
                         <label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeNotInDictionary60000" checked>
@@ -392,35 +392,40 @@
                             <span class="checkmark"></span>
                             فیلتر بر اساس دیکشنری بزرگ
                         </label>
+                        <label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeSimilarToPersianWords" checked>
+                            <span class="checkmark"></span>
+                            حذف کلمات مشترک با فارسی
+                        </label>
 						<label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeNotStemmer" >
                             <span class="checkmark"></span>
                             ریشه یابی ظاهری کلمات
                         </label>
 						<label class="custom-checkbox flex items-center">
-                            <input type="checkbox" id="removeCEFR_A1" >
+                            <input type="checkbox" id="removeCEFR_A1" checked>
                             <span class="checkmark"></span>
-                            حذف کلمات سطج A1
+                            حذف کلمات سطح A1
                         </label>
  						<label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeCEFR_A2" >
                             <span class="checkmark"></span>
-                            حذف کلمات سطج A2
+                            حذف کلمات سطح A2
                         </label>
 						<label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeCEFR_B1" >
                             <span class="checkmark"></span>
-                            حذف کلمات سطج B1
+                            حذف کلمات سطح B1
                         </label>
  						<label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeCEFR_B2" >
                             <span class="checkmark"></span>
-                            حذف کلمات سطج B2
+                            حذف کلمات سطح B2
                         </label>
 						<label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeCEFR_C1" >
                             <span class="checkmark"></span>
-                            حذف کلمات سطج C1
+                            حذف کلمات سطح C1
                         </label>
                        <label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="sortWords" >
@@ -525,6 +530,7 @@
     let externalLargeDictionary = new Set();
     let irregularWords = new Set();
     let simpleWords = new Set();
+    let persianSimilarWords = new Set();
     let stopWords = new Set();
     let CEFR_A1_Words = new Set();
     let CEFR_A2_Words = new Set();
@@ -538,6 +544,7 @@
     const STOPWORDS_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_stop.txt";
     const IRREGULARWORDS_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_irregular.txt";
     const SIMPLEWORDS_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_simple.txt";
+    const PERSIAN_SIMILAR_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_similar_persian.txt";
     const CEFR_A1_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_A1.txt";
     const CEFR_A2_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_A2.txt";
     const CEFR_B1_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_B1.txt";
@@ -684,7 +691,7 @@
         switchTab('list');
 
         // Load dictionary and stop words
-        Promise.all([fetchSmallDictionary(),fetchLargeDictionary(), fetchStopWords(),fetchIrregularWords(),fetchSimpleWords(),fetchCEFR_A1_Words(),fetchCEFR_A2_Words(),fetchCEFR_B1_Words(),fetchCEFR_B2_Words(),fetchCEFR_C1_Words()])
+        Promise.all([fetchSmallDictionary(),fetchLargeDictionary(), fetchStopWords(),fetchIrregularWords(),fetchSimpleWords(),fetchCEFR_A1_Words(),fetchCEFR_A2_Words(),fetchCEFR_B1_Words(),fetchCEFR_B2_Words(),fetchCEFR_C1_Words(),fetchPersianSimilarWords()])
             .then(() => {
                 showNotification('پایگاه داده کلمات با موفقیت بارگذاری شد', 'success');
             })
@@ -747,6 +754,25 @@
             showNotification('خطا در بارگذاری کلمات آسان', 'error');
         }
     }
+
+	// Fetch persian similar words from external source
+    async function fetchPersianSimilarWords() {
+        try {
+            showNotification('در حال بارکذاری کلمات مشترک با فارسی...', 'info');
+            const response = await fetch(PERSIAN_SIMILAR_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            persianSimilarWords = new Set(words);
+            console.log("✅ Persian similar words loaded:", persianSimilarWords.size, "words");
+        } catch (err) {
+            console.error("❌ Failed to load persian similar words:", err);
+            showNotification('خطا در بارگذاری کلمات مشترک با فارسی', 'error');
+        }
+    }
+
 	
     // Fetch stop words from external source
     async function fetchStopWords() {
@@ -1016,6 +1042,7 @@
 		const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
 		const filterSmallDictionary = document.getElementById('removeNotInDictionary60000').checked;
 		const filterLargeDictionary = document.getElementById('removeNotInDictionary300000').checked;
+		const filterPersianSimilars = document.getElementById('removeSimilarToPersianWords').checked;
 		const filterSimpleWords =  document.getElementById('removeSimpleWords').checked;
 		const filterIrregularVerbs =  document.getElementById('removeIrregularVerbs').checked;
 		const filterStemmer =  document.getElementById('removeNotStemmer').checked;
@@ -1090,6 +1117,7 @@
 				(!filterSmallDictionary || externalSmallDictionary.has(word.toLowerCase())) && 
 				(!filterIrregularVerbs || !irregularWords.has(word.toLowerCase())) && 
 				(!filterSimpleWords || !simpleWords.has(word.toLowerCase())) && 
+				(!filterPersianSimilars || !persianSimilarWords.has(word.toLowerCase())) && 
 				(!filterCEFR_A1 || !CEFR_A1_Words.has(word.toLowerCase())) && 
 				(!filterCEFR_A2 || !CEFR_A2_Words.has(word.toLowerCase())) && 
 				(!filterCEFR_B1 || !CEFR_B1_Words.has(word.toLowerCase())) && 
