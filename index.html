@@ -397,8 +397,32 @@
                             <span class="checkmark"></span>
                             ریشه یابی ظاهری کلمات
                         </label>
-
-                         <label class="custom-checkbox flex items-center">
+						<label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeCEFR_A1" >
+                            <span class="checkmark"></span>
+                            حذف کلمات سطج A1
+                        </label>
+ 						<label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeCEFR_A2" >
+                            <span class="checkmark"></span>
+                            حذف کلمات سطج A2
+                        </label>
+						<label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeCEFR_B1" >
+                            <span class="checkmark"></span>
+                            حذف کلمات سطج B1
+                        </label>
+ 						<label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeCEFR_B2" >
+                            <span class="checkmark"></span>
+                            حذف کلمات سطج B2
+                        </label>
+						<label class="custom-checkbox flex items-center">
+                            <input type="checkbox" id="removeCEFR_C1" >
+                            <span class="checkmark"></span>
+                            حذف کلمات سطج C1
+                        </label>
+                       <label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="sortWords" >
                             <span class="checkmark"></span>
                             مرتب‌سازی بر اساس فراوانی
@@ -502,6 +526,11 @@
     let irregularWords = new Set();
     let simpleWords = new Set();
     let stopWords = new Set();
+    let CEFR_A1_Words = new Set();
+    let CEFR_A2_Words = new Set();
+    let CEFR_B1_Words = new Set();
+    let CEFR_B2_Words = new Set();
+    let CEFR_C1_Words = new Set();
     
     // Paths to external files
     const LARGE_DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
@@ -509,6 +538,11 @@
     const STOPWORDS_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_stop.txt";
     const IRREGULARWORDS_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_irregular.txt";
     const SIMPLEWORDS_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_simple.txt";
+    const CEFR_A1_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_A1.txt";
+    const CEFR_A2_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_A2.txt";
+    const CEFR_B1_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_B1.txt";
+    const CEFR_B2_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_B2.txt";
+    const CEFR_C1_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_CEFR_C1.txt";
     
     // Helper functions for simulating pass by reference
     function createRef(initialValue = "") {
@@ -650,7 +684,7 @@
         switchTab('list');
 
         // Load dictionary and stop words
-        Promise.all([fetchSmallDictionary(),fetchLargeDictionary(), fetchStopWords(),fetchIrregularWords(),fetchSimpleWords()])
+        Promise.all([fetchSmallDictionary(),fetchLargeDictionary(), fetchStopWords(),fetchIrregularWords(),fetchSimpleWords(),fetchCEFR_A1_Words(),fetchCEFR_A2_Words(),fetchCEFR_B1_Words(),fetchCEFR_B2_Words(),fetchCEFR_C1_Words()])
             .then(() => {
                 showNotification('پایگاه داده کلمات با موفقیت بارگذاری شد', 'success');
             })
@@ -751,7 +785,98 @@
             showNotification('خطا در بارگزاری افعال بی قاعده', 'error');
         }
     }
+	
+	// Fetch CEFR A1 words from external source
+    async function fetchCEFR_A1_Words() {
+        try {
+            showNotification('در حال بارگیری لغات سطح A1...', 'info');
+            const response = await fetch(CEFR_A1_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            CEFR_A1_Words = new Set(words);
+            console.log("✅ CEFR A1 words loaded:", CEFR_A1_Words.size);
+        } catch (err) {
+            console.error("❌ Failed to load CEFR A1 words:", err);
+            showNotification('خطا در بارگذاری لغات سطح A1', 'error');
+        }
+    }
 
+	// Fetch CEFR A2 words from external source
+    async function fetchCEFR_A2_Words() {
+        try {
+            showNotification('در حال بارگیری لغات سطح A2...', 'info');
+            const response = await fetch(CEFR_A2_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            CEFR_A2_Words = new Set(words);
+            console.log("✅ CEFR A2 words loaded:", CEFR_A2_Words.size);
+        } catch (err) {
+            console.error("❌ Failed to load CEFR A2 words:", err);
+            showNotification('خطا در بارگذاری لغات سطح A2', 'error');
+        }
+    }
+	
+	// Fetch CEFR B1 words from external source
+    async function fetchCEFR_B1_Words() {
+        try {
+            showNotification('در حال بارگیری لغات سطح B1...', 'info');
+            const response = await fetch(CEFR_B1_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            CEFR_B1_Words = new Set(words);
+            console.log("✅ CEFR B1 words loaded:", CEFR_B1_Words.size);
+        } catch (err) {
+            console.error("❌ Failed to load CEFR B1 words:", err);
+            showNotification('خطا در بارگذاری لغات سطح B1', 'error');
+        }
+    }
+	
+	// Fetch CEFR B2 words from external source
+    async function fetchCEFR_B2_Words() {
+        try {
+            showNotification('در حال بارگیری لغات سطح B2...', 'info');
+            const response = await fetch(CEFR_B2_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            CEFR_B2_Words = new Set(words);
+            console.log("✅ CEFR B2 words loaded:", CEFR_B2_Words.size);
+        } catch (err) {
+            console.error("❌ Failed to load CEFR B2 words:", err);
+            showNotification('خطا در بارگذاری لغات سطح B2', 'error');
+        }
+    }
+	
+	// Fetch CEFR C1 words from external source
+    async function fetchCEFR_C1_Words() {
+        try {
+            showNotification('در حال بارگیری لغات سطح C1...', 'info');
+            const response = await fetch(CEFR_C1_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            CEFR_C1_Words = new Set(words);
+            console.log("✅ CEFR C1 words loaded:", CEFR_C1_Words.size);
+        } catch (err) {
+            console.error("❌ Failed to load CEFR C1 words:", err);
+            showNotification('خطا در بارگذاری لغات سطح C1', 'error');
+        }
+    }
+	
+	
     // Show notification
     function showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
@@ -894,6 +1019,11 @@
 		const filterSimpleWords =  document.getElementById('removeSimpleWords').checked;
 		const filterIrregularVerbs =  document.getElementById('removeIrregularVerbs').checked;
 		const filterStemmer =  document.getElementById('removeNotStemmer').checked;
+		const filterCEFR_A1 =  document.getElementById('removeCEFR_A1').checked;
+		const filterCEFR_A2 =  document.getElementById('removeCEFR_A2').checked;
+		const filterCEFR_B1 =  document.getElementById('removeCEFR_B1').checked;
+		const filterCEFR_B2 =  document.getElementById('removeCEFR_B2').checked;
+		const filterCEFR_C1 =  document.getElementById('removeCEFR_C1').checked;
 		
 
         updateProgressBar(0, 'آماده سازی متن...');
@@ -960,6 +1090,11 @@
 				(!filterSmallDictionary || externalSmallDictionary.has(word.toLowerCase())) && 
 				(!filterIrregularVerbs || !irregularWords.has(word.toLowerCase())) && 
 				(!filterSimpleWords || !simpleWords.has(word.toLowerCase())) && 
+				(!filterCEFR_A1 || !CEFR_A1_Words.has(word.toLowerCase())) && 
+				(!filterCEFR_A2 || !CEFR_A2_Words.has(word.toLowerCase())) && 
+				(!filterCEFR_B1 || !CEFR_B1_Words.has(word.toLowerCase())) && 
+				(!filterCEFR_B2 || !CEFR_B2_Words.has(word.toLowerCase())) && 
+				(!filterCEFR_C1 || !CEFR_C1_Words.has(word.toLowerCase())) && 
                 (!stopWords.has(word.toLowerCase()))
             )
         );
