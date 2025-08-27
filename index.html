@@ -385,12 +385,12 @@
                         <label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeNotInDictionary60000" checked>
                             <span class="checkmark"></span>
-                            فیلتر بر اساس 60000 کلمه
+                            فیلتر بر اساس دیکشنری کوچک
                         </label>
                         <label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeNotInDictionary300000" checked>
                             <span class="checkmark"></span>
-                            فیلتر بر اساس 3000000 کلمه
+                            فیلتر بر اساس دیکشنری بزرگ
                         </label>
 						<label class="custom-checkbox flex items-center">
                             <input type="checkbox" id="removeNotStemmer" checked>
@@ -497,12 +497,18 @@
 <script>
     // Global variables
     let processedWords = {};
-    let externalDictionary = new Set();
+    let externalSmallDictionary = new Set();
+    let externalLargeDictionary = new Set();
+    let irregularWords = new Set();
+    let simpleWords = new Set();
     let stopWords = new Set();
     
     // Paths to external files
-    const DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
+    const LARGE_DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_alpha.txt";
+    const SMALL_DICTIONARY_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_beta.txt";
     const STOPWORDS_FILE_PATH = "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_stop.txt";
+    const IRREGULARWORDS_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_irregular.txt";
+    const SIMPLEWORDS_FILE_PATH= "https://raw.githubusercontent.com/MortezaMaghrebi/Datesets-For-Word-Hero-Application/refs/heads/main/words_simple.txt";
     
     // Helper functions for simulating pass by reference
     function createRef(initialValue = "") {
@@ -644,9 +650,9 @@
         switchTab('list');
 
         // Load dictionary and stop words
-        Promise.all([fetchDictionary(), fetchStopWords()])
+        Promise.all([fetchSmallDictionary(),fetchLargeDictionary(), fetchStopWords(),fetchIrregularWords(),fetchSimpleWords()])
             .then(() => {
-                showNotification('لغت‌نامه و کلمات توقف با موفقیت بارگذاری شدند', 'success');
+                showNotification('پایگاه داده کلمات با موفقیت بارگذاری شد', 'success');
             })
             .catch(err => {
                 console.error("Failed to load resources:", err);
@@ -655,23 +661,59 @@
     });
 
     // Fetch dictionary from external source
-    async function fetchDictionary() {
+    async function fetchLargeDictionary() {
         try {
-            showNotification('در حال بارگذاری لغت‌نامه...', 'info');
-            const response = await fetch(DICTIONARY_FILE_PATH);
+            showNotification('در حال بارگذاری لغت‌نامه بزرگ...', 'info');
+            const response = await fetch(LARGE_DICTIONARY_FILE_PATH);
             if (!response.ok) throw new Error("HTTP error " + response.status);
     
             const text = await response.text();
             const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
     
-            externalDictionary = new Set(words);
-            console.log("✅ Dictionary loaded:", externalDictionary.size, "words");
+            externalLargeDictionary = new Set(words);
+            console.log("✅ Large dictionary loaded:", externalLargeDictionary.size, "words");
         } catch (err) {
-            console.error("❌ Failed to load dictionary:", err);
-            showNotification('خطا در بارگذاری لغت‌نامه', 'error');
+            console.error("❌ Failed to load large dictionary:", err);
+            showNotification('خطا در بارگذاری لغت‌نامه بزرگ', 'error');
         }
     }
 
+	// Fetch dictionary from external source
+    async function fetchSmallDictionary() {
+        try {
+            showNotification('در حال بارگذاری لغت‌نامه کوچک...', 'info');
+            const response = await fetch(SMALL_DICTIONARY_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            externalSmallDictionary = new Set(words);
+            console.log("✅ Small dictionary loaded:", externalSmallDictionary.size, "words");
+        } catch (err) {
+            console.error("❌ Failed to load small dictionary:", err);
+            showNotification('خطا در بارگذاری لغت‌نامه کوچک', 'error');
+        }
+    }
+
+	// Fetch simple words from external source
+    async function fetchSimpleWords() {
+        try {
+            showNotification('در حال بارگذاری کلمات آسان...', 'info');
+            const response = await fetch(SIMPLEWORDS_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            simpleWords = new Set(words);
+            console.log("✅ Simple words loaded:", simpleWords.size, "words");
+        } catch (err) {
+            console.error("❌ Failed to load simple words:", err);
+            showNotification('خطا در بارگذاری کلمات آسان', 'error');
+        }
+    }
+	
     // Fetch stop words from external source
     async function fetchStopWords() {
         try {
@@ -687,6 +729,26 @@
         } catch (err) {
             console.error("❌ Failed to load stop words:", err);
             showNotification('خطا در بارگذاری کلمات توقف', 'error');
+        }
+    }
+	
+	
+	
+	// Fetch Irregular verbs from external source
+    async function fetchIrregularWords() {
+        try {
+            showNotification('در حال بارگیری افعال بی قاعده...', 'info');
+            const response = await fetch(IRREGULARWORDS_FILE_PATH);
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+    
+            const text = await response.text();
+            const words = text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean);
+    
+            irregularWords = new Set(words);
+            console.log("✅ Irregular verbs loaded:", irregularWords.size);
+        } catch (err) {
+            console.error("❌ Failed to load irregular verbs:", err);
+            showNotification('خطا در بارگزاری افعال بی قاعده', 'error');
         }
     }
 
@@ -883,10 +945,19 @@
         
         // Final processing after all sentences are done
         const minFrequency = parseInt(document.getElementById('minFrequency').value) || 1;
+		const filterSmallDictionary = document.getElementById('removeNotInDictionary60000').checked;
+		const filterLargeDictionary = document.getElementById('removeNotInDictionary300000').checked;
+		const filterSimpleWords =  document.getElementById('removeSimpleWords').checked;
+		const filterIrregularVerbs =  document.getElementById('removeIrregularVerbs').checked;
+		const filterStemmer =  document.getElementById('removeNotStemmer').checked;
+		
         const filteredWordFreq = Object.fromEntries(
             Object.entries(processedWords).filter(([word, freq]) =>
                 (freq >= minFrequency) && 
-                externalDictionary.has(word.toLowerCase()) && 
+                (!filterLargeDictionary || externalLargeDictionary.has(word.toLowerCase())) && 
+				(!filterSmallDictionary || externalSmallDictionary.has(word.toLowerCase())) && 
+				(!filterIrregularVerbs || !irregularWords.has(word.toLowerCase())) && 
+				(!filterSimpleWords || !simpleWords.has(word.toLowerCase())) && 
                 (!stopWords.has(word.toLowerCase()))
             )
         );
