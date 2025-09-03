@@ -1,3 +1,5 @@
-Word Hero~New Update Available V3.3.2.2~1404/05/27~Download Now~https://github.com/MortezaMaghrebi/Word-Hero/raw/refs/heads/main/WordHero/app/release/app-release.apk
+Word Hero~New Update Available V3.4.1~1404/05/27~Download Now~https://github.com/MortezaMaghrebi/Word-Hero/raw/refs/heads/main/WordHero/app/release/app-release.apk
 Word Hero~Turn on your VPN to get images while you are learning
 Word Hero~Tap on image twice to change the image online and find best matching image for the word
+Word Hero~You can add your desired book using wordhero.ir~Visit Site~http://wordhero.ir
+Word Hero~Word dataset in github may take up to 10 minutes to be updated, please wait if you can't see your own created word dataset.~Check In Github~https://github.com/MortezaMaghrebi/User_Datasets_For_WordHero_Application/blob/main/Datasets.txt
