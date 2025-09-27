@@ -1,6 +1,5 @@
 Word Hero~اگه لغتی رو کامل بلدی هنگام بازی انگشتتو روی دکمه خیلی آسون بود نگه دار تا کامل حذف بشه~1404/06/22
 Word Hero~نسخه جدید در دسترس است: 3.5.3~1404/06/22~دانلود از مایکت~https://myket.ir/app/mortezamaghrebi.com.wordhero
-Hero/raw/refs/heads/main/WordHero/app/release/app-release.apk
 Word Hero~برای دریافت تصاویر در حین یادگیری، VPN خود را روشن کنید~1404/06/12
 Word Hero~برای تغییر آنلاین تصویر و یافتن بهترین تصویر منطبق با کلمه، دو بار روی تصویر ضربه بزنید~1404/06/12
 Word Hero~به‌روزرسانی مجموعه کلمات در گیت‌هاب ممکن است تا ۱۰ دقیقه طول بکشد، در صورت عدم مشاهده مجموعه کلمات ایجاد شده خود، لطفاً منتظر بمانید~1404/06/12~بررسی در گیت‌هاب~https://github.com/MortezaMaghrebi/User_Datasets_For_WordHero_Application/blob/main/Datasets.txt
